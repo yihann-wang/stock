@@ -1,4 +1,41 @@
 {
-  "offers": [],
-  "last_search_time": null
+  "offers": [
+    {
+      "announcement_id": "cninfo_2026-04-08_003041_1225083833",
+      "stock_code": "003041",
+      "stock_name": "真爱美家",
+      "offer_price": 27.74,
+      "offer_start": "2026-03-23",
+      "offer_end": "2026-04-21",
+      "type": "partial",
+      "condition": "none",
+      "min_accept_ratio": 0,
+      "partial_pct": 15.0,
+      "acquirer": "广州探迹远擎科技合伙企业（有限合伙）",
+      "notes": "探迹远擎在协议受让29.99%股份成为控股股东后，发起15%的部分要约以进一步巩固控制权。",
+      "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-04-09/1225083833.PDF",
+      "discovered_at": "2026-04-11T15:40:53",
+      "ai_validated": true,
+      "status": "active"
+    },
+    {
+      "announcement_id": "cninfo_2026-04-07_002931_1225082398",
+      "stock_code": "002931",
+      "stock_name": "锋龙股份",
+      "offer_price": 17.72,
+      "offer_start": "2026-03-20",
+      "offer_end": "2026-04-20",
+      "type": "partial",
+      "condition": "none",
+      "min_accept_ratio": 0,
+      "partial_pct": 13.02,
+      "acquirer": "深圳市优必选科技股份有限公司",
+      "notes": "优必选在协议受让29.99%股份的基础上，通过部分要约收购进一步增强对上市公司的控制权。",
+      "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-04-08/1225082398.PDF",
+      "discovered_at": "2026-04-11T15:41:10",
+      "ai_validated": true,
+      "status": "active"
+    }
+  ],
+  "last_search_time": "2026-04-11T15:41:10"
 }
