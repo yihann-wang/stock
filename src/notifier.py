@@ -234,3 +234,38 @@ def notify_cb_arbitrage(results: list):
 ---"""
 
     send_dingtalk("可转债转股套利信号", text)
+
+
+def notify_cb_no_opportunity(total: int, neg_list: list):
+    """可转债扫描完成但无达标机会"""
+    neg_info = ""
+    if neg_list:
+        rows = []
+        for d in sorted(neg_list, key=lambda x: x.get("premium_rate", 0)):
+            reasons = []
+            if d.get("volume", 0) < 1000:
+                reasons.append(f"成交额{d.get('volume', 0):.0f}万不足")
+            bp = d.get("bond_price", 0)
+            if bp < 90:
+                reasons.append(f"价格{bp:.1f}<90")
+            if bp > 200:
+                reasons.append(f"价格{bp:.1f}>200")
+            reason_str = "、".join(reasons) if reasons else "溢价率未达阈值"
+            rows.append(
+                f"- {d.get('bond_name', '')}({d.get('bond_code', '')}) "
+                f"溢价率 {d.get('premium_rate', 0):.2f}% → 未通过: {reason_str}"
+            )
+        neg_info = "\n\n**负溢价转债(未达标):**\n\n" + "\n".join(rows)
+
+    text = f"""### 【可转债扫描报告】
+
+---
+
+> 扫描 **{total}** 只可转债，当前无达标套利机会
+{neg_info}
+
+> 达标条件: 溢价率<-0.5% 且 成交额>1000万 且 价格90~200元
+
+---"""
+
+    send_dingtalk("可转债扫描报告", text)

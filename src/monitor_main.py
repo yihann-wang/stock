@@ -8,6 +8,7 @@ from .cb_strategy import scan_cb_arbitrage
 from .config import get_active_offers
 from .notifier import (
     notify_cb_arbitrage,
+    notify_cb_no_opportunity,
     notify_deadline_warning,
     notify_negative_spread,
     notify_spread_signal,
@@ -59,12 +60,17 @@ def run():
 
     # ===== 可转债套利扫描（不受交易日限制，数据来自收盘快照）=====
     logger.info("--- 可转债套利扫描 ---")
+    from .cb_data import get_cb_list
+    cb_list = get_cb_list()
     cb_results = scan_cb_arbitrage()
     if cb_results:
         logger.info(f"发现 {len(cb_results)} 只可转债套利机会，发送通知")
         notify_cb_arbitrage(cb_results)
     else:
         logger.info("无可转债套利机会")
+        if cb_list:
+            neg = [d for d in cb_list if d.get("premium_rate", 0) < 0]
+            notify_cb_no_opportunity(len(cb_list), neg)
 
     logger.info("=== 价差监控流程结束 ===")
 
