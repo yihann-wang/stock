@@ -9,6 +9,9 @@ thresholds:
 announcement:
   keyword: "要约收购报告书"
   search_days: 7                   # 搜索最近 N 天的公告
+  extra_keywords:                  # 额外扫描的公告关键词
+    - "转股价格向下修正"
+    - "吸收合并"
 
 # AI 提取配置
 extractor:
@@ -24,6 +27,20 @@ cb_arbitrage:
   min_bond_price: 0               # 最低转债价格(元), 0=不限制
   max_bond_price: 9999            # 最高转债价格(元), 9999=不限制
   max_results: 10                # 最多推送条数
+
+# 可转债强赎预警
+cb_redemption:
+  enabled: true
+  min_convert_value: 125           # 转股价值超过此值预警(130=已触发)
+  min_volume: 500                  # 最小成交额(万元)
+  max_results: 10
+
+# AH股溢价监控
+ah_premium:
+  enabled: true
+  max_premium: 200                 # 溢价率超过此值推送(A股太贵)
+  min_premium: -10                 # 溢价率低于此值推送(A股折价，罕见)
+  max_results: 10
 
 # 通知配置
 notification:

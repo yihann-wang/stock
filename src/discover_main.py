@@ -14,7 +14,11 @@ from .announcement import (
 )
 from .config import add_offer, get_known_announcement_ids, load_config
 from .extractor import extract_offer_info, validate_offer
-from .notifier import notify_new_offer_unvalidated, notify_new_offer_validated
+from .notifier import (
+    notify_new_offer_unvalidated,
+    notify_new_offer_validated,
+    notify_announcement_found,
+)
 from .price import get_realtime_price
 
 logging.basicConfig(
@@ -179,7 +183,51 @@ def run():
         # 公告之间间隔，避免请求过快
         time.sleep(2)
 
+    # ===== 额外关键词扫描（下修、吸收合并等）=====
+    extra_keywords = ann_cfg.get("extra_keywords", [])
+    if extra_keywords:
+        _scan_extra_announcements(extra_keywords, search_days, known_ids)
+
     logger.info("=== 公告发现流程结束 ===")
+
+
+def _scan_extra_announcements(keywords: list, search_days: int, known_ids: set):
+    """扫描额外关键词的公告（下修、吸收合并等），发现即推送，不做AI解析"""
+    for kw in keywords:
+        logger.info(f"扫描额外关键词: {kw}")
+        try:
+            announcements = search_announcements(keyword=kw, days=search_days)
+        except Exception as e:
+            logger.warning(f"搜索 '{kw}' 失败: {e}")
+            continue
+
+        if not announcements:
+            continue
+
+        new_anns = []
+        for ann in announcements:
+            ann_id = make_announcement_id(ann)
+            if ann_id not in known_ids:
+                new_anns.append(ann)
+                known_ids.add(ann_id)
+
+        if not new_anns:
+            logger.info(f"  '{kw}': 无新公告")
+            continue
+
+        logger.info(f"  '{kw}': 发现 {len(new_anns)} 条新公告")
+        for ann in new_anns:
+            pdf_url = get_pdf_url(ann.get("adjunctUrl", ""))
+            pub_date = get_announcement_date(ann.get("announcementTime", 0))
+            notify_announcement_found(
+                keyword=kw,
+                title=ann.get("announcementTitle", ""),
+                stock_name=ann.get("secName", ""),
+                stock_code=ann.get("secCode", ""),
+                pub_date=pub_date,
+                pdf_url=pdf_url,
+            )
+            time.sleep(1)
 
 
 if __name__ == "__main__":

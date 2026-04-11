@@ -269,3 +269,105 @@ def notify_cb_no_opportunity(total: int, neg_list: list):
 ---"""
 
     send_dingtalk("可转债扫描报告", text)
+
+
+def notify_cb_redemption_alert(results: list):
+    """可转债强赎预警 - 正股接近或超过转股价130%"""
+    if not results:
+        return
+
+    rows = []
+    for r in results:
+        status = "**已触发**" if r.ratio >= 130 else "接近触发"
+        rows.append(
+            f"- **{r.bond_name}**({r.bond_code}) | "
+            f"正股/转股价 **{r.ratio:.1f}%** {status} | "
+            f"转债价 {r.bond_price:.2f} | 转股价值 {r.convert_value:.2f}"
+        )
+    rows_text = "\n".join(rows)
+
+    text = f"""### 【可转债强赎预警】
+
+---
+
+> **{len(results)}** 只可转债正股接近/超过强赎触发线(130%)
+
+{rows_text}
+
+> 强赎触发: 正股连续15-20天 > 转股价×130%
+> 触发后转债将被强制赎回(约100元)，高价转债面临大幅回调风险
+
+---"""
+
+    send_dingtalk("可转债强赎预警", text)
+
+
+def notify_announcement_found(keyword: str, title: str, stock_name: str,
+                               stock_code: str, pub_date: str, pdf_url: str):
+    """通用公告发现通知（下修、吸收合并等）"""
+    tag_map = {
+        "转股价格向下修正": "转股价下修",
+        "下修": "转股价下修",
+        "吸收合并": "吸收合并",
+        "换股合并": "换股合并",
+    }
+    tag = "公告"
+    for k, v in tag_map.items():
+        if k in keyword:
+            tag = v
+            break
+
+    text = f"""### 【{tag}公告发现】
+
+---
+
+- 股票: {stock_code} {stock_name}
+- 公告: {title}
+- 发布日期: {pub_date}
+- 公告原文: [点击查看PDF]({pdf_url})
+
+> 关键词: {keyword}
+
+---"""
+
+    send_dingtalk(f"{tag}公告发现", text)
+
+
+def notify_ah_premium(results: list):
+    """AH股溢价率极端偏离通知"""
+    if not results:
+        return
+
+    discount = [r for r in results if r.premium_rate < 0]
+    premium = [r for r in results if r.premium_rate >= 100]
+
+    sections = []
+    if discount:
+        rows = "\n".join(
+            f"- **{r.stock_name}**({r.stock_code}) | "
+            f"溢价率 **{r.premium_rate:.1f}%** | A股 {r.a_price:.2f} | H股 {r.h_price:.2f}港元"
+            for r in discount
+        )
+        sections.append(f"**A股折价(罕见):**\n\n{rows}")
+
+    if premium:
+        rows = "\n".join(
+            f"- **{r.stock_name}**({r.stock_code}) | "
+            f"溢价率 **{r.premium_rate:.1f}%** | A股 {r.a_price:.2f} | H股 {r.h_price:.2f}港元"
+            for r in premium
+        )
+        sections.append(f"**A股高溢价(>200%):**\n\n{rows}")
+
+    text = f"""### 【AH股溢价异常】
+
+---
+
+> 发现 **{len(results)}** 只AH股溢价率极端偏离
+
+{chr(10).join(sections)}
+
+> A股折价 → 买A卖H机会 | A股高溢价 → 回归风险
+
+---"""
+
+    send_dingtalk("AH股溢价异常", text)

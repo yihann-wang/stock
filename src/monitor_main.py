@@ -1,14 +1,16 @@
-"""价差监控入口 - 要约收购监控 + 可转债套利扫描"""
+"""价差监控入口 - 要约收购 + 可转债套利 + 强赎预警 + AH溢价"""
 
 import logging
-import os
 import sys
 
-from .cb_strategy import scan_cb_arbitrage
+from .ah_monitor import scan_ah_premium
+from .cb_strategy import scan_cb_arbitrage, scan_cb_redemption_alert
 from .config import get_active_offers
 from .notifier import (
+    notify_ah_premium,
     notify_cb_arbitrage,
     notify_cb_no_opportunity,
+    notify_cb_redemption_alert,
     notify_deadline_warning,
     notify_negative_spread,
     notify_spread_signal,
@@ -58,7 +60,7 @@ def run():
     else:
         logger.info("今日非交易日，跳过要约收购监控")
 
-    # ===== 可转债套利扫描（不受交易日限制，数据来自收盘快照）=====
+    # ===== 可转债套利扫描 =====
     logger.info("--- 可转债套利扫描 ---")
     from .cb_data import get_cb_list
     cb_list = get_cb_list()
@@ -71,6 +73,24 @@ def run():
         if cb_list:
             neg = [d for d in cb_list if d.get("premium_rate", 0) < 0]
             notify_cb_no_opportunity(len(cb_list), neg)
+
+    # ===== 可转债强赎预警 =====
+    logger.info("--- 可转债强赎预警 ---")
+    redemption_results = scan_cb_redemption_alert(cb_list)
+    if redemption_results:
+        logger.info(f"发现 {len(redemption_results)} 只接近强赎的可转债")
+        notify_cb_redemption_alert(redemption_results)
+    else:
+        logger.info("无强赎预警")
+
+    # ===== AH股溢价监控 =====
+    logger.info("--- AH股溢价监控 ---")
+    ah_results = scan_ah_premium()
+    if ah_results:
+        logger.info(f"发现 {len(ah_results)} 只AH股极端溢价")
+        notify_ah_premium(ah_results)
+    else:
+        logger.info("无AH股极端溢价")
 
     logger.info("=== 价差监控流程结束 ===")
 
