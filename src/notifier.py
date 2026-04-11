@@ -278,7 +278,7 @@ def notify_cb_redemption_alert(results: list):
 
     rows = []
     for r in results:
-        status = "**已触发**" if r.ratio >= 130 else "接近触发"
+        status = "**达到观察区**" if r.ratio >= 130 else "接近观察区"
         rows.append(
             f"- **{r.bond_name}**({r.bond_code}) | "
             f"正股/转股价 **{r.ratio:.1f}%** {status} | "
@@ -290,12 +290,13 @@ def notify_cb_redemption_alert(results: list):
 
 ---
 
-> **{len(results)}** 只可转债正股接近/超过强赎触发线(130%)
+> **{len(results)}** 只可转债正股接近/达到有条件赎回观察区间
 
 {rows_text}
 
-> 强赎触发: 正股连续15-20天 > 转股价×130%
-> 触发后转债将被强制赎回(约100元)，高价转债面临大幅回调风险
+> 主流条款: 转股期内，正股在任意连续30个交易日中至少15日收盘价 >= 转股价×130%，公司获得提前赎回权
+> 触发条款 ≠ 立即强赎，需关注公司董事会是否决定行使赎回权
+> 若最终实施强赎，未及时卖出或转股的转债将按面值+应计利息赎回，高价转债存在回撤风险
 
 ---"""
 
