@@ -1,0 +1,31 @@
+# 信号过滤阈值
+thresholds:
+  min_spread_pct: 3.0              # 最小价差收益率(%)
+  min_annualized_pct: 30.0         # 最小年化收益率(%)
+  warn_days_left: 5                # 截止提醒天数
+  min_daily_volume: 500            # 最小日均成交额(万元)
+
+# 公告搜索配置
+announcement:
+  keyword: "要约收购报告书"
+  search_days: 7                   # 搜索最近 N 天的公告
+
+# AI 提取配置
+extractor:
+  model: "gemini-3-flash-preview"
+  base_url: "https://jeniya.top/v1"
+  max_text_length: 8000            # PDF 文本截取长度
+
+# 可转债套利配置
+cb_arbitrage:
+  enabled: true
+  max_premium_rate: -0.5         # 溢价率上限(%), 低于此值才推送(负值=折价)
+  min_volume: 1000               # 最小成交额(万元), 过滤流动性差的转债
+  min_bond_price: 90             # 最低转债价格(元), 过滤信用风险高的低价债
+  max_bond_price: 200            # 最高转债价格(元), 过滤投机性高价债
+  max_results: 10                # 最多推送条数
+
+# 通知配置
+notification:
+  dingtalk:
+    enabled: true

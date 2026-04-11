@@ -1,0 +1,28 @@
+name: Monitor Tender Offer Spreads
+
+on:
+  schedule:
+    # 交易时段每 30 分钟运行（北京时间 9:30-15:00）
+    # 对应 UTC 1:30-7:00
+    - cron: '30 1 * * 1-5'
+    - cron: '0,30 2-6 * * 1-5'
+    - cron: '0 7 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - run: pip install -r requirements.txt
+
+      - run: python -m src.monitor_main
+        env:
+          DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
+          DINGTALK_SECRET: ${{ secrets.DINGTALK_SECRET }}

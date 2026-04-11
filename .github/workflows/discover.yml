@@ -1,0 +1,37 @@
+name: Discover Tender Offers
+
+on:
+  schedule:
+    # 每天早上 9:00 和下午 15:30（北京时间）
+    # 对应 UTC 1:00 和 7:30
+    - cron: '0 1 * * 1-5'
+    - cron: '30 7 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - run: pip install -r requirements.txt
+
+      - run: python -m src.discover_main
+        env:
+          DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
+          DINGTALK_SECRET: ${{ secrets.DINGTALK_SECRET }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+
+      # 如果发现新公告，自动提交更新后的 known_offers.json
+      - name: Commit updated offers
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add known_offers.json
+          git diff --staged --quiet || git commit -m "auto: update known offers"
+          git push
