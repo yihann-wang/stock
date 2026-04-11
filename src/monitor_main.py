@@ -1,6 +1,7 @@
-"""价差监控入口 - 加载要约 → 获取股价 → 计算信号 → 通知"""
+"""价差监控入口 - 要约收购监控 + 可转债套利扫描"""
 
 import logging
+import os
 import sys
 
 from .cb_strategy import scan_cb_arbitrage
@@ -24,39 +25,39 @@ logger = logging.getLogger(__name__)
 def run():
     logger.info("=== 价差监控流程开始 ===")
 
-    # 检查是否为交易日
-    if not is_trading_day():
-        logger.info("今日非交易日，跳过监控")
-        return
+    trading_day = is_trading_day()
 
-    # ===== 要约收购监控 =====
-    logger.info("--- 要约收购监控 ---")
-    active_offers = get_active_offers()
-    if active_offers:
-        logger.info(f"当前活跃要约: {len(active_offers)} 个")
-        for offer in active_offers:
-            logger.info(
-                f"  - {offer.get('stock_name', '')}({offer.get('stock_code', '')}) "
-                f"要约价 {offer.get('offer_price', 'N/A')} 截止 {offer.get('offer_end', 'N/A')}"
-            )
+    # ===== 要约收购监控（仅交易日）=====
+    if trading_day:
+        logger.info("--- 要约收购监控 ---")
+        active_offers = get_active_offers()
+        if active_offers:
+            logger.info(f"当前活跃要约: {len(active_offers)} 个")
+            for offer in active_offers:
+                logger.info(
+                    f"  - {offer.get('stock_name', '')}({offer.get('stock_code', '')}) "
+                    f"要约价 {offer.get('offer_price', 'N/A')} 截止 {offer.get('offer_end', 'N/A')}"
+                )
 
-        signals = evaluate_signals(active_offers)
-        if signals:
-            logger.info(f"产生 {len(signals)} 个要约收购信号")
-            for signal in signals:
-                logger.info(f"信号: [{signal.signal_type}] {signal.message}")
-                if signal.signal_type == "spread":
-                    notify_spread_signal(signal.result)
-                elif signal.signal_type == "deadline":
-                    notify_deadline_warning(signal.result)
-                elif signal.signal_type == "negative":
-                    notify_negative_spread(signal.result)
+            signals = evaluate_signals(active_offers)
+            if signals:
+                logger.info(f"产生 {len(signals)} 个要约收购信号")
+                for signal in signals:
+                    logger.info(f"信号: [{signal.signal_type}] {signal.message}")
+                    if signal.signal_type == "spread":
+                        notify_spread_signal(signal.result)
+                    elif signal.signal_type == "deadline":
+                        notify_deadline_warning(signal.result)
+                    elif signal.signal_type == "negative":
+                        notify_negative_spread(signal.result)
+            else:
+                logger.info("无要约收购达标信号")
         else:
-            logger.info("无要约收购达标信号")
+            logger.info("无活跃要约")
     else:
-        logger.info("无活跃要约")
+        logger.info("今日非交易日，跳过要约收购监控")
 
-    # ===== 可转债套利扫描 =====
+    # ===== 可转债套利扫描（不受交易日限制，数据来自收盘快照）=====
     logger.info("--- 可转债套利扫描 ---")
     cb_results = scan_cb_arbitrage()
     if cb_results:
