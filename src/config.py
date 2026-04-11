@@ -12,6 +12,15 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 CONFIG_PATH = ROOT_DIR / "config.yml"
 OFFERS_PATH = ROOT_DIR / "known_offers.json"
 
+# 自动加载 .env 文件（本地开发用，GitHub Actions 用 Secrets）
+_env_file = ROOT_DIR / ".env"
+if _env_file.exists():
+    for line in _env_file.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            k, v = line.split("=", 1)
+            os.environ.setdefault(k.strip(), v.strip())
+
 
 def load_config() -> dict:
     """加载 config.yml 配置"""
