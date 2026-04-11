@@ -15,15 +15,14 @@ class AHPremiumResult:
     stock_name: str           # 名称
     a_price: float            # A股价格(元)
     h_price: float            # H股价格(港元)
-    premium_rate: float       # AH溢价率(%), >0 表示A股贵
+    premium_rate: float       # AH溢价率(%), >0 表示A股贵, <0 表示A股便宜
 
 
 def scan_ah_premium() -> list[AHPremiumResult]:
     """
     扫描AH股溢价率，筛选极端偏离的标的。
 
-    数据源: akshare (stock_a_ah_tx)
-    溢价率 = (A股价格 / H股价格 / 汇率 - 1) × 100%
+    数据源: akshare stock_zh_ah_spot_em()
     """
     cfg = load_config().get("ah_premium", {})
     if not cfg.get("enabled", True):
@@ -41,7 +40,7 @@ def scan_ah_premium() -> list[AHPremiumResult]:
         return []
 
     try:
-        df = ak.stock_a_ah_tx()
+        df = ak.stock_zh_ah_spot_em()
     except Exception as e:
         logger.warning(f"AH股数据获取失败: {e}")
         return []
@@ -52,44 +51,29 @@ def scan_ah_premium() -> list[AHPremiumResult]:
 
     logger.info(f"获取到 {len(df)} 只AH股数据")
 
-    # 尝试匹配列名（akshare 不同版本列名可能不同）
-    col_map = {}
-    for col in df.columns:
-        cl = col.lower()
-        if "a股代码" in col or "代码" in col and "h" not in cl:
-            col_map["code"] = col
-        elif "名称" in col or "简称" in col:
-            col_map["name"] = col
-        elif "a股价" in col or ("最新价" in col and "h" not in cl):
-            col_map["a_price"] = col
-        elif "h股价" in col:
-            col_map["h_price"] = col
-        elif "溢价" in col or "比价" in col:
-            col_map["premium"] = col
-
-    if "premium" not in col_map:
-        logger.warning(f"AH股数据列名无法匹配, 可用列: {list(df.columns)}")
-        return []
+    # 匹配列名（处理编码问题）
+    cols = list(df.columns)
+    col_name = cols[1]       # 名称
+    col_h_code = cols[2]     # H股代码
+    col_h_price = cols[3]    # 最新价-HKD
+    col_a_code = cols[5]     # A股代码
+    col_a_price = cols[6]    # 最新价-RMB
+    col_premium = cols[9]    # 溢价(%)
 
     results = []
     for _, row in df.iterrows():
         try:
-            premium = float(row.get(col_map.get("premium", ""), 0))
+            premium = float(row[col_premium])
         except (ValueError, TypeError):
             continue
 
         if premium > max_premium or premium < min_premium:
-            a_price = 0
-            h_price = 0
-            try:
-                a_price = float(row.get(col_map.get("a_price", ""), 0))
-                h_price = float(row.get(col_map.get("h_price", ""), 0))
-            except (ValueError, TypeError):
-                pass
+            a_price = float(row[col_a_price]) if row[col_a_price] else 0
+            h_price = float(row[col_h_price]) if row[col_h_price] else 0
 
             results.append(AHPremiumResult(
-                stock_code=str(row.get(col_map.get("code", ""), "")),
-                stock_name=str(row.get(col_map.get("name", ""), "")),
+                stock_code=str(row[col_a_code]),
+                stock_name=str(row[col_name]),
                 a_price=a_price,
                 h_price=h_price,
                 premium_rate=round(premium, 2),
