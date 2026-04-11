@@ -21,8 +21,8 @@ cb_arbitrage:
   enabled: true
   max_premium_rate: -0.5         # 溢价率上限(%), 低于此值才推送(负值=折价)
   min_volume: 1000               # 最小成交额(万元), 过滤流动性差的转债
-  min_bond_price: 90             # 最低转债价格(元), 过滤信用风险高的低价债
-  max_bond_price: 200            # 最高转债价格(元), 过滤投机性高价债
+  min_bond_price: 0               # 最低转债价格(元), 0=不限制
+  max_bond_price: 9999            # 最高转债价格(元), 9999=不限制
   max_results: 10                # 最多推送条数
 
 # 通知配置
