@@ -333,8 +333,9 @@ notification:
 
 | 变量名 | 必填 | 说明 |
 |--------|------|------|
-| `LLM_API_KEY` | 是（二选一） | LLM API 密钥 |
-| `DEEPSEEK_API_KEY` | 是（二选一） | 向后兼容，`LLM_API_KEY` 优先 |
+| `LLM_API_KEY` | 是 | LLM API 密钥（也兼容 `DEEPSEEK_API_KEY`） |
+| `LLM_BASE_URL` | 否 | LLM API 地址，覆盖 config.yml 中的 `extractor.base_url` |
+| `LLM_MODEL` | 否 | LLM 模型名，覆盖 config.yml 中的 `extractor.model` |
 | `DINGTALK_WEBHOOK` | 是 | 钉钉机器人 Webhook URL |
 | `DINGTALK_SECRET` | 是 | 钉钉机器人签名密钥 |
 

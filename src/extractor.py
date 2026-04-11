@@ -35,8 +35,8 @@ def extract_offer_info(pdf_text: str) -> dict | None:
     """调用 DeepSeek API 从 PDF 文本中提取要约信息"""
     cfg = load_config().get("extractor", {})
     api_key = get_env("LLM_API_KEY", required=False) or get_env("DEEPSEEK_API_KEY")
-    model = cfg.get("model", "deepseek-chat")
-    base_url = cfg.get("base_url", "https://api.deepseek.com")
+    model = get_env("LLM_MODEL", required=False) or cfg.get("model", "deepseek-chat")
+    base_url = get_env("LLM_BASE_URL", required=False) or cfg.get("base_url", "https://api.deepseek.com")
     max_len = cfg.get("max_text_length", 8000)
 
     truncated_text = pdf_text[:max_len]
