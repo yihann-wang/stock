@@ -14,7 +14,7 @@ announcement:
 extractor:
   model: "gemini-3-flash-preview"
   base_url: "https://jeniya.top/v1"
-  max_text_length: 8000            # PDF 文本截取长度
+  max_text_length: 20000           # PDF 文本截取长度
 
 # 可转债套利配置
 cb_arbitrage:
