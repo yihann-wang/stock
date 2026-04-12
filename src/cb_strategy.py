@@ -1,7 +1,8 @@
-"""可转债策略模块 - 转股套利 + 强赎预警"""
+"""可转债策略模块 - 转股套利 + 强赎预警 + 回售套利"""
 
 import logging
 from dataclasses import dataclass
+from datetime import datetime
 
 from .cb_data import get_cb_list
 from .config import load_config
@@ -22,6 +23,25 @@ class CBArbitrageResult:
     premium_rate: float        # 转股溢价率(%), 负值=折价=套利机会
     volume: float              # 成交额(万元)
     profit_per_ten: float      # 每10张预期收益(元)
+
+
+@dataclass
+class CBPutbackResult:
+    """可转债回售套利结果"""
+    bond_code: str
+    bond_name: str
+    bond_price: float
+    stock_code: str
+    stock_name: str
+    convert_price: float
+    resale_trig_price: float      # 回售触发价 = 转股价 × 70%
+    stock_price: float
+    stock_vs_trig: float          # 正股/触发价 百分比
+    years_to_expire: float        # 剩余年限
+    expire_date: str
+    putback_price: float          # 预估回售价(面值+利息)
+    profit_pct: float             # 预估收益率(%)
+    volume: float
 
 
 @dataclass
@@ -111,6 +131,108 @@ def scan_cb_arbitrage(cb_list: list[dict] | None = None) -> list[CBArbitrageResu
     else:
         logger.info("当前无满足条件的负溢价套利机会")
 
+    return results
+
+
+def scan_cb_putback(cb_list: list[dict] | None = None) -> list[CBPutbackResult]:
+    """
+    扫描可转债回售套利「观察名单」。
+
+    回售条件(主流条款):
+      - 最后两个计息年度内
+      - 正股连续30个交易日收盘价 < 转股价 × 70%
+      - 须在公司设定的回售申报窗口内申报
+
+    本扫描器仅做「预警观察」，不代表可立即执行套利:
+      - 剩余年限 <= 2 年
+      - 当前正股/转股价 < 阈值 (单日代替30日连续条件)
+      - 转债现价 <= max_bond_price (默认100, 保证利润空间)
+
+    使用者需自行校验: ①连续30日条件 ②申报窗口期 ③具体条款差异
+    """
+    cfg = load_config().get("cb_putback", {})
+    if not cfg.get("enabled", True):
+        return []
+
+    max_years = cfg.get("max_years_to_expire", 2.0)
+    max_stock_ratio = cfg.get("max_stock_ratio", 72)
+    min_profit_pct = cfg.get("min_profit_pct", 0.5)
+    min_volume = cfg.get("min_volume", 500)
+    estimated_interest = cfg.get("estimated_interest", 1.5)
+    max_bond_price = cfg.get("max_bond_price", 100)  # 硬过滤: 100元以上不做
+    max_results = cfg.get("max_results", 10)
+
+    if cb_list is None:
+        cb_list = get_cb_list()
+    if not cb_list:
+        return []
+
+    today = datetime.now().date()
+    results = []
+
+    for cb in cb_list:
+        cp = cb.get("convert_price", 0)
+        cv = cb.get("convert_value", 0)
+        bp = cb.get("bond_price", 0)
+        volume = cb.get("volume", 0)
+        expire_date_str = cb.get("expire_date", "")
+
+        if cp <= 0 or cv <= 0 or bp <= 0 or volume < min_volume:
+            continue
+        if bp > max_bond_price:  # 硬过滤: 超过票面价不做
+            continue
+        if not expire_date_str:
+            continue
+
+        # 检查剩余年限
+        try:
+            expire_date = datetime.strptime(expire_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            continue
+
+        years_to_expire = (expire_date - today).days / 365
+        if years_to_expire <= 0 or years_to_expire > max_years:
+            continue
+
+        # stock_price 反推: cv = stock_price * 100 / cp → stock_price = cv * cp / 100
+        stock_price = cv * cp / 100
+        resale_trig_price = cp * 0.7
+        # stock_vs_cp = 正股 / 转股价 × 100%, 70%=触发线
+        stock_vs_cp = stock_price / cp * 100
+
+        # 正股/转股价 必须低于(或接近)70% 触发线
+        if stock_vs_cp > max_stock_ratio:
+            continue
+
+        # 预估回售价 = 面值 + 利息
+        putback_price = 100 + estimated_interest
+        profit_pct = (putback_price - bp) / bp * 100
+
+        if profit_pct < min_profit_pct:
+            continue
+
+        results.append(CBPutbackResult(
+            bond_code=cb.get("bond_code", ""),
+            bond_name=cb.get("bond_name", ""),
+            bond_price=bp,
+            stock_code=cb.get("stock_code", ""),
+            stock_name=cb.get("stock_name", ""),
+            convert_price=cp,
+            resale_trig_price=round(resale_trig_price, 2),
+            stock_price=round(stock_price, 2),
+            stock_vs_trig=round(stock_vs_cp, 1),   # 正股/转股价 %，70=触发线
+            years_to_expire=round(years_to_expire, 2),
+            expire_date=expire_date_str,
+            putback_price=round(putback_price, 2),
+            profit_pct=round(profit_pct, 2),
+            volume=volume,
+        ))
+
+    results.sort(key=lambda x: -x.profit_pct)
+    results = results[:max_results]
+
+    if results:
+        logger.info(f"发现 {len(results)} 只可转债回售套利机会")
     return results
 
 

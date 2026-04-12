@@ -73,7 +73,8 @@ def _fetch_datacenter_realtime(session: requests.Session) -> list[dict]:
             "columns": (
                 "SECURITY_CODE,SECURITY_NAME_ABBR,"
                 "CONVERT_STOCK_CODE,SECURITY_SHORT_NAME,"
-                "LISTING_DATE,DELIST_DATE,TRANSFER_START_DATE"
+                "LISTING_DATE,DELIST_DATE,TRANSFER_START_DATE,"
+                "EXPIRE_DATE"
             ),
             "quoteColumns": (
                 "f2~10~SECURITY_CODE~BOND_PRICE,"
@@ -129,6 +130,7 @@ def _fetch_datacenter_realtime(session: requests.Session) -> list[dict]:
                 "convert_value": round(convert_value, 3),
                 "premium_rate": round(premium_rate, 2),
                 "volume": round(volume / 10000, 2) if volume > 0 else 0,
+                "expire_date": (item.get("EXPIRE_DATE") or "")[:10],
             })
 
         total_pages = (data.get("result") or {}).get("pages", 1)

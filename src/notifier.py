@@ -271,6 +271,80 @@ def notify_cb_no_opportunity(total: int, neg_list: list):
     send_dingtalk("可转债扫描报告", text)
 
 
+def notify_cb_ipo(results: list):
+    """可转债打新提醒"""
+    if not results:
+        return
+
+    rows = []
+    for r in results:
+        when = "**今日可申购**" if r.days_from_today == 0 else (
+            f"**{r.days_from_today}天后申购**" if r.days_from_today > 0 else "已截止"
+        )
+        rows.append(
+            f"- {r.bond_name}({r.bond_code}) → 申购代码 **{r.apply_code}** | "
+            f"{when} ({r.apply_date}) | "
+            f"正股 {r.stock_name}({r.stock_code}) {r.stock_price:.2f} | "
+            f"转股价值 {r.convert_value:.2f} | "
+            f"规模 {r.issue_size:.1f}亿 | 评级 {r.rating} | "
+            f"上市 {r.listing_date}"
+        )
+    rows_text = "\n".join(rows)
+
+    text = f"""### 【可转债打新提醒】
+
+---
+
+> 发现 **{len(results)}** 只可申购的可转债
+
+{rows_text}
+
+> **原股东**: 股权登记日持仓 → 按比例优先配售（实际可配=配售比例×持股）
+> **网上申购**: 顶格申购1000张，中签率通常 0.001%~0.01%，但上市首日历史平均+10~20%
+> 两者互不冲突，中签后T+20~30日左右上市
+
+---"""
+
+    send_dingtalk("可转债打新提醒", text)
+
+
+def notify_cb_putback(results: list):
+    """可转债回售观察名单（预警，需人工验证）"""
+    if not results:
+        return
+
+    rows = []
+    for r in results:
+        rows.append(
+            f"- **{r.bond_name}**({r.bond_code}) | "
+            f"预估收益 **{r.profit_pct:.2f}%** | "
+            f"转债价 {r.bond_price:.2f} ≤ 估算回售价 {r.putback_price:.2f} | "
+            f"正股/转股价 {r.stock_vs_trig:.0f}% (70%=触发) | "
+            f"剩余 {r.years_to_expire:.1f}年 | "
+            f"成交额 {r.volume:.0f}万"
+        )
+    rows_text = "\n".join(rows)
+
+    text = f"""### 【可转债回售观察名单】
+
+---
+
+> **{len(results)}** 只可转债进入回售观察区（仅预警，非可执行信号）
+
+{rows_text}
+
+> 筛选条件: 剩余年限<=2年 + 正股<转股价×70% + 转债价<=100元
+> **需人工验证**:
+> ① 正股是否已连续30个交易日低于触发价
+> ② 是否处于公司设定的回售申报窗口期
+> ③ 该债具体回售条款细节（各债可能有差异）
+> 不符合以上任一条件 → 无法真正回售，请勿直接买入
+
+---"""
+
+    send_dingtalk("可转债回售观察名单", text)
+
+
 def notify_cb_redemption_alert(results: list):
     """可转债强赎预警 - 正股接近或超过转股价130%"""
     if not results:

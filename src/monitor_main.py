@@ -2,9 +2,15 @@
 
 import logging
 
-from .cb_strategy import scan_cb_arbitrage
+from .cb_ipo import scan_cb_ipo
+from .cb_strategy import scan_cb_arbitrage, scan_cb_putback
 from .config import get_active_offers, load_config
-from .notifier import notify_cb_arbitrage, notify_spread_signal
+from .notifier import (
+    notify_cb_arbitrage,
+    notify_cb_ipo,
+    notify_cb_putback,
+    notify_spread_signal,
+)
 from .price import is_trading_day
 from .strategy import evaluate_signals
 
@@ -40,19 +46,37 @@ def run():
     else:
         logger.info("今日非交易日，跳过要约收购监控")
 
-    # ===== 可转债转股套利 =====
+    # ===== 可转债套利（共用一份快照）=====
     logger.info("--- 可转债套利 ---")
     from .cb_data import get_cb_list
     cb_list = get_cb_list()
     if cb_list:
+        # 转股套利
         cb_results = scan_cb_arbitrage(cb_list)
         if cb_results:
-            logger.info(f"发现 {len(cb_results)} 只可转债套利机会")
+            logger.info(f"发现 {len(cb_results)} 只转股套利机会")
             notify_cb_arbitrage(cb_results)
         else:
-            logger.info("无可转债套利机会")
+            logger.info("无转股套利机会")
+
+        # 回售套利
+        putback_results = scan_cb_putback(cb_list)
+        if putback_results:
+            logger.info(f"发现 {len(putback_results)} 只回售套利机会")
+            notify_cb_putback(putback_results)
+        else:
+            logger.info("无回售套利机会")
     else:
         logger.warning("可转债数据获取失败")
+
+    # ===== 可转债打新 =====
+    logger.info("--- 可转债打新 ---")
+    ipo_results = scan_cb_ipo()
+    if ipo_results:
+        logger.info(f"发现 {len(ipo_results)} 只可打新可转债")
+        notify_cb_ipo(ipo_results)
+    else:
+        logger.info("无可打新可转债")
 
     logger.info("=== 价差监控流程结束 ===")
 
