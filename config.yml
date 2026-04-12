@@ -1,47 +1,51 @@
-# 信号过滤阈值
+# ============================================================
+# 只推送能赚钱的套利机会，风险/信息性信号全部关闭
+# ============================================================
+
+# 要约收购套利阈值
 thresholds:
   min_spread_pct: 3.0              # 最小价差收益率(%)
   min_annualized_pct: 30.0         # 最小年化收益率(%)
-  warn_days_left: 5                # 截止提醒天数
+  warn_days_left: 5                # 截止提醒天数（已禁用，见下）
   min_daily_volume: 500            # 最小日均成交额(万元)
 
 # 公告搜索配置
 announcement:
   keyword: "要约收购报告书"
-  search_days: 7                   # 搜索最近 N 天的公告
-  extra_keywords:                  # 额外扫描的公告关键词
-    - "转股价格向下修正"
-    - "吸收合并"
+  search_days: 7
+  extra_keywords: []               # 不扫描下修/吸收合并公告（信息性，不直接赚钱）
 
 # AI 提取配置
 extractor:
   model: "gemini-3-flash-preview"
   base_url: "https://jeniya.top/v1"
-  max_text_length: 20000           # PDF 文本截取长度
+  max_text_length: 20000
 
-# 可转债套利配置
+# 可转债转股套利（负溢价 → 买入转股赚差价）
 cb_arbitrage:
   enabled: true
-  max_premium_rate: -0.5         # 溢价率上限(%), 低于此值才推送(负值=折价)
-  min_volume: 1000               # 最小成交额(万元), 过滤流动性差的转债
-  min_bond_price: 0               # 最低转债价格(元), 0=不限制
-  max_bond_price: 9999            # 最高转债价格(元), 9999=不限制
-  max_results: 10                # 最多推送条数
+  max_premium_rate: -0.5
+  min_volume: 1000
+  min_bond_price: 0
+  max_bond_price: 9999
+  max_results: 10
 
-# 可转债强赎预警
+# 可转债强赎预警 - 已禁用（风险提示，不是套利机会）
 cb_redemption:
-  enabled: true
-  min_convert_value: 125           # 转股价值超过此值预警(130=触发观察区)
-  max_convert_value: 150           # 上限，过滤早已超标的陈年老转债
-  min_volume: 500                  # 最小成交额(万元)
-  max_results: 10
+  enabled: false
 
-# AH股溢价监控
+# AH股溢价监控 - 已禁用（均值回归，不是直接套利）
 ah_premium:
-  enabled: true
-  max_premium: 200                 # 溢价率超过此值推送(A股太贵)
-  min_premium: -10                 # 溢价率低于此值推送(A股折价，罕见)
-  max_results: 10
+  enabled: false
+
+# 要约收购的截止日提醒 / 负价差警告 - 已禁用（非套利）
+# 套利信号(spread)仍保留
+signals:
+  enable_deadline: false
+  enable_negative: false
+
+# 可转债无机会时不推送扫描报告
+cb_arbitrage_report_when_empty: false
 
 # 通知配置
 notification:
