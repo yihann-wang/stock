@@ -13,7 +13,8 @@ thresholds:
 announcement:
   keyword: "要约收购报告书"
   search_days: 7
-  extra_keywords: []               # 不扫描下修/吸收合并公告（信息性，不直接赚钱）
+  extra_keywords:                  # 吸收合并 = 真套利（换股比例套利）
+    - "吸收合并"
 
 # AI 提取配置
 extractor:
