@@ -68,23 +68,26 @@ def get_known_announcement_ids() -> set[str]:
     return {o["announcement_id"] for o in data["offers"] if "announcement_id" in o}
 
 
-def load_known_extra_announcements() -> set[str]:
-    """加载已推送过的额外公告ID（下修/吸收合并等）"""
+def load_known_extra_announcements() -> list[str]:
+    """加载已推送过的额外公告ID列表（按插入顺序，下修/吸收合并等）"""
     if not EXTRA_ANNS_PATH.exists():
-        return set()
+        return []
     try:
         with open(EXTRA_ANNS_PATH, "r", encoding="utf-8") as f:
             data = json.load(f)
-        return set(data.get("ids", []))
+        return list(data.get("ids", []))
     except Exception:
-        return set()
+        return []
 
 
-def save_known_extra_announcements(ids: set[str]):
-    """保存已推送过的额外公告ID，保留最近500条"""
-    trimmed = list(ids)[-500:] if len(ids) > 500 else list(ids)
+def save_known_extra_announcements(ids: list[str]):
+    """保存已推送过的额外公告ID列表，保留最近500条（末尾500个）"""
+    trimmed = ids[-500:] if len(ids) > 500 else ids
     with open(EXTRA_ANNS_PATH, "w", encoding="utf-8") as f:
-        json.dump({"ids": trimmed, "updated_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S")}, f, ensure_ascii=False, indent=2)
+        json.dump(
+            {"ids": trimmed, "updated_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S")},
+            f, ensure_ascii=False, indent=2,
+        )
 
 
 def add_offer(offer: dict):

@@ -41,25 +41,29 @@ def run():
     ann_cfg = cfg.get("announcement", {})
     keyword = ann_cfg.get("keyword", "要约收购报告书")
     search_days = ann_cfg.get("search_days", 7)
+    extra_keywords = ann_cfg.get("extra_keywords", [])
 
-    # 1. 搜索公告
+    # 1. 搜索主关键词公告
     logger.info(f"搜索关键词: {keyword}, 最近 {search_days} 天")
     announcements = search_announcements(keyword=keyword, days=search_days)
 
-    if not announcements:
-        logger.info("未搜索到公告，流程结束")
-        return
-
-    # 2. 过滤已知公告
-    known_ids = get_known_announcement_ids()
     new_announcements = []
-    for ann in announcements:
-        ann_id = make_announcement_id(ann)
-        if ann_id not in known_ids:
-            new_announcements.append(ann)
+    if announcements:
+        known_ids = get_known_announcement_ids()
+        for ann in announcements:
+            ann_id = make_announcement_id(ann)
+            if ann_id not in known_ids:
+                new_announcements.append(ann)
+        if not new_announcements:
+            logger.info(f"共 {len(announcements)} 条要约公告，均已处理过")
+    else:
+        logger.info("未搜索到要约收购公告")
 
+    # 无论主流程是否有新公告，都执行额外关键词扫描
     if not new_announcements:
-        logger.info(f"共 {len(announcements)} 条公告，均已处理过，流程结束")
+        if extra_keywords:
+            _scan_extra_announcements(extra_keywords, search_days)
+        logger.info("=== 公告发现流程结束 ===")
         return
 
     logger.info(f"发现 {len(new_announcements)} 条新公告")
@@ -190,7 +194,6 @@ def run():
         time.sleep(2)
 
     # ===== 额外关键词扫描（下修、吸收合并等）=====
-    extra_keywords = ann_cfg.get("extra_keywords", [])
     if extra_keywords:
         _scan_extra_announcements(extra_keywords, search_days)
 
@@ -199,7 +202,8 @@ def run():
 
 def _scan_extra_announcements(keywords: list, search_days: int):
     """扫描额外关键词的公告（下修、吸收合并等），发现即推送，不做AI解析"""
-    known_extra = load_known_extra_announcements()
+    known_list = load_known_extra_announcements()  # 保留插入顺序
+    known_set = set(known_list)                     # O(1) 查找
     new_found = False
 
     for kw in keywords:
@@ -216,9 +220,10 @@ def _scan_extra_announcements(keywords: list, search_days: int):
         new_anns = []
         for ann in announcements:
             ann_id = make_announcement_id(ann)
-            if ann_id not in known_extra:
+            if ann_id not in known_set:
                 new_anns.append((ann, ann_id))
-                known_extra.add(ann_id)
+                known_list.append(ann_id)
+                known_set.add(ann_id)
                 new_found = True
 
         if not new_anns:
@@ -239,10 +244,10 @@ def _scan_extra_announcements(keywords: list, search_days: int):
             )
             time.sleep(1)
 
-    # 持久化已推送的ID，避免跨次运行重复推送
+    # 持久化（保留最近500条），避免跨次运行重复推送
     if new_found:
-        save_known_extra_announcements(known_extra)
-        logger.info(f"已保存 {len(known_extra)} 条额外公告ID")
+        save_known_extra_announcements(known_list)
+        logger.info(f"已保存 {min(len(known_list), 500)} 条额外公告ID")
 
 
 if __name__ == "__main__":
