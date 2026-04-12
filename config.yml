@@ -31,7 +31,8 @@ cb_arbitrage:
 # 可转债强赎预警
 cb_redemption:
   enabled: true
-  min_convert_value: 125           # 转股价值超过此值预警(130=已触发)
+  min_convert_value: 125           # 转股价值超过此值预警(130=触发观察区)
+  max_convert_value: 150           # 上限，过滤早已超标的陈年老转债
   min_volume: 500                  # 最小成交额(万元)
   max_results: 10
 

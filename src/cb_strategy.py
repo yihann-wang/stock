@@ -126,7 +126,8 @@ def scan_cb_redemption_alert(cb_list: list[dict] | None = None) -> list[CBRedemp
     if not cfg.get("enabled", True):
         return []
 
-    threshold = cfg.get("min_convert_value", 125)
+    min_cv = cfg.get("min_convert_value", 125)
+    max_cv = cfg.get("max_convert_value", 150)
     min_volume = cfg.get("min_volume", 500)
     max_results = cfg.get("max_results", 10)
 
@@ -141,7 +142,7 @@ def scan_cb_redemption_alert(cb_list: list[dict] | None = None) -> list[CBRedemp
         cp = cb.get("convert_price", 0)
         volume = cb.get("volume", 0)
 
-        if cv < threshold or cp <= 0 or volume < min_volume:
+        if cv < min_cv or cv > max_cv or cp <= 0 or volume < min_volume:
             continue
 
         # ratio = 正股价/转股价 的百分比 = convert_value (因为 cv = stock_price * 100/cp)
