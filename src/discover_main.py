@@ -12,7 +12,13 @@ from .announcement import (
     make_announcement_id,
     search_announcements,
 )
-from .config import add_offer, get_known_announcement_ids, load_config
+from .config import (
+    add_offer,
+    get_known_announcement_ids,
+    load_config,
+    load_known_extra_announcements,
+    save_known_extra_announcements,
+)
 from .extractor import extract_offer_info, validate_offer
 from .notifier import (
     notify_new_offer_unvalidated,
@@ -186,13 +192,16 @@ def run():
     # ===== 额外关键词扫描（下修、吸收合并等）=====
     extra_keywords = ann_cfg.get("extra_keywords", [])
     if extra_keywords:
-        _scan_extra_announcements(extra_keywords, search_days, known_ids)
+        _scan_extra_announcements(extra_keywords, search_days)
 
     logger.info("=== 公告发现流程结束 ===")
 
 
-def _scan_extra_announcements(keywords: list, search_days: int, known_ids: set):
+def _scan_extra_announcements(keywords: list, search_days: int):
     """扫描额外关键词的公告（下修、吸收合并等），发现即推送，不做AI解析"""
+    known_extra = load_known_extra_announcements()
+    new_found = False
+
     for kw in keywords:
         logger.info(f"扫描额外关键词: {kw}")
         try:
@@ -207,16 +216,17 @@ def _scan_extra_announcements(keywords: list, search_days: int, known_ids: set):
         new_anns = []
         for ann in announcements:
             ann_id = make_announcement_id(ann)
-            if ann_id not in known_ids:
-                new_anns.append(ann)
-                known_ids.add(ann_id)
+            if ann_id not in known_extra:
+                new_anns.append((ann, ann_id))
+                known_extra.add(ann_id)
+                new_found = True
 
         if not new_anns:
             logger.info(f"  '{kw}': 无新公告")
             continue
 
         logger.info(f"  '{kw}': 发现 {len(new_anns)} 条新公告")
-        for ann in new_anns:
+        for ann, _ in new_anns:
             pdf_url = get_pdf_url(ann.get("adjunctUrl", ""))
             pub_date = get_announcement_date(ann.get("announcementTime", 0))
             notify_announcement_found(
@@ -228,6 +238,11 @@ def _scan_extra_announcements(keywords: list, search_days: int, known_ids: set):
                 pdf_url=pdf_url,
             )
             time.sleep(1)
+
+    # 持久化已推送的ID，避免跨次运行重复推送
+    if new_found:
+        save_known_extra_announcements(known_extra)
+        logger.info(f"已保存 {len(known_extra)} 条额外公告ID")
 
 
 if __name__ == "__main__":

@@ -79,7 +79,14 @@ def scan_ah_premium() -> list[AHPremiumResult]:
                 premium_rate=round(premium, 2),
             ))
 
-    results.sort(key=lambda x: x.premium_rate)
+    # 按偏离程度排序：负溢价(A股折价)按绝对值大→小，高正溢价按 premium-100 大→小
+    # 两端极端偏离都保留
+    def _deviation(r: AHPremiumResult) -> float:
+        if r.premium_rate < 0:
+            return abs(r.premium_rate) + 10000  # 负溢价罕见，优先级更高
+        return r.premium_rate  # 高正溢价越大越偏离
+
+    results.sort(key=_deviation, reverse=True)
     results = results[:max_results]
 
     if results:

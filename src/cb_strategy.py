@@ -37,7 +37,7 @@ class CBRedemptionAlert:
     ratio: float               # 正股价/转股价 的百分比(如 135 表示135%)
 
 
-def scan_cb_arbitrage() -> list[CBArbitrageResult]:
+def scan_cb_arbitrage(cb_list: list[dict] | None = None) -> list[CBArbitrageResult]:
     """
     扫描全市场可转债，筛选负溢价(折价)套利机会。
 
@@ -57,7 +57,8 @@ def scan_cb_arbitrage() -> list[CBArbitrageResult]:
     max_bond_price = cfg.get("max_bond_price", 200)
     max_results = cfg.get("max_results", 10)
 
-    cb_list = get_cb_list()
+    if cb_list is None:
+        cb_list = get_cb_list()
     if not cb_list:
         logger.warning("未获取到可转债数据")
         return []

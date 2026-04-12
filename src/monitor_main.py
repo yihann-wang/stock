@@ -60,28 +60,35 @@ def run():
     else:
         logger.info("今日非交易日，跳过要约收购监控")
 
-    # ===== 可转债套利扫描 =====
-    logger.info("--- 可转债套利扫描 ---")
+    # ===== 可转债相关扫描（共用一份快照）=====
+    logger.info("--- 可转债数据获取 ---")
     from .cb_data import get_cb_list
     cb_list = get_cb_list()
-    cb_results = scan_cb_arbitrage()
+
+    # 可转债套利
+    logger.info("--- 可转债套利扫描 ---")
+    cb_results = scan_cb_arbitrage(cb_list)
     if cb_results:
         logger.info(f"发现 {len(cb_results)} 只可转债套利机会，发送通知")
         notify_cb_arbitrage(cb_results)
-    else:
+    elif cb_list:
         logger.info("无可转债套利机会")
-        if cb_list:
-            neg = [d for d in cb_list if d.get("premium_rate", 0) < 0]
-            notify_cb_no_opportunity(len(cb_list), neg)
-
-    # ===== 可转债强赎预警 =====
-    logger.info("--- 可转债强赎预警 ---")
-    redemption_results = scan_cb_redemption_alert(cb_list)
-    if redemption_results:
-        logger.info(f"发现 {len(redemption_results)} 只接近强赎的可转债")
-        notify_cb_redemption_alert(redemption_results)
+        neg = [d for d in cb_list if d.get("premium_rate", 0) < 0]
+        notify_cb_no_opportunity(len(cb_list), neg)
     else:
-        logger.info("无强赎预警")
+        logger.warning("可转债数据获取失败，跳过套利扫描")
+
+    # 可转债强赎预警
+    logger.info("--- 可转债强赎预警 ---")
+    if cb_list:
+        redemption_results = scan_cb_redemption_alert(cb_list)
+        if redemption_results:
+            logger.info(f"发现 {len(redemption_results)} 只接近强赎的可转债")
+            notify_cb_redemption_alert(redemption_results)
+        else:
+            logger.info("无强赎预警")
+    else:
+        logger.warning("可转债数据获取失败，跳过强赎扫描")
 
     # ===== AH股溢价监控 =====
     logger.info("--- AH股溢价监控 ---")

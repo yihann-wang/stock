@@ -11,6 +11,7 @@ import yaml
 ROOT_DIR = Path(__file__).resolve().parent.parent
 CONFIG_PATH = ROOT_DIR / "config.yml"
 OFFERS_PATH = ROOT_DIR / "known_offers.json"
+EXTRA_ANNS_PATH = ROOT_DIR / "known_extra_announcements.json"
 
 # 自动加载 .env 文件（本地开发用，GitHub Actions 用 Secrets）
 _env_file = ROOT_DIR / ".env"
@@ -65,6 +66,25 @@ def get_known_announcement_ids() -> set[str]:
     """获取所有已知公告 ID 集合"""
     data = load_offers()
     return {o["announcement_id"] for o in data["offers"] if "announcement_id" in o}
+
+
+def load_known_extra_announcements() -> set[str]:
+    """加载已推送过的额外公告ID（下修/吸收合并等）"""
+    if not EXTRA_ANNS_PATH.exists():
+        return set()
+    try:
+        with open(EXTRA_ANNS_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return set(data.get("ids", []))
+    except Exception:
+        return set()
+
+
+def save_known_extra_announcements(ids: set[str]):
+    """保存已推送过的额外公告ID，保留最近500条"""
+    trimmed = list(ids)[-500:] if len(ids) > 500 else list(ids)
+    with open(EXTRA_ANNS_PATH, "w", encoding="utf-8") as f:
+        json.dump({"ids": trimmed, "updated_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S")}, f, ensure_ascii=False, indent=2)
 
 
 def add_offer(offer: dict):
