@@ -27,11 +27,11 @@ jobs:
           LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
           LLM_MODEL: ${{ secrets.LLM_MODEL }}
 
-      # 如果发现新公告，自动提交更新后的 known_offers.json
+      # 如果发现新公告，自动提交更新后的去重文件
       - name: Commit updated offers
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add known_offers.json
+          git add known_offers.json known_extra_announcements.json
           git diff --staged --quiet || git commit -m "auto: update known offers"
           git push
