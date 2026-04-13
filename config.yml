@@ -37,15 +37,9 @@ cb_ipo:
   days_ahead: 5                  # 提前N天提醒(显示未来N天内的申购机会)
   days_back: 0                   # 向后N天(0=仅显示今天及未来)
 
-# 可转债回售套利（最后2年+正股<70%转股价 → 按面值+利息回售）
+# 可转债回售观察 - 已禁用（仅预警观察，需人工验证连续30天+申报窗口，不是立即可赚）
 cb_putback:
-  enabled: true
-  max_years_to_expire: 2.0       # 剩余年限上限(回售窗口)
-  max_stock_ratio: 72            # 正股/触发价 百分比上限 (70%=触发线)
-  min_profit_pct: 0.5            # 最低预期收益率(%)
-  min_volume: 500                # 最小成交额(万元)
-  estimated_interest: 1.5        # 保守估算当期利息(%)
-  max_results: 10
+  enabled: false
 
 # 可转债强赎预警 - 已禁用（风险提示，不是套利机会）
 cb_redemption:
