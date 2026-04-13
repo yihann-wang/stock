@@ -2,9 +2,9 @@ name: Discover Tender Offers
 
 on:
   schedule:
-    # 每个工作日 7:58 北京时间 = UTC 23:58 (前一天)
+    # 每个工作日 6:58 北京时间 = UTC 22:58 (前一天)
     # 周一至周五北京时间 = 周日至周四 UTC
-    - cron: '58 23 * * 0-4'
+    - cron: '58 22 * * 0-4'
   workflow_dispatch:
 
 jobs:
