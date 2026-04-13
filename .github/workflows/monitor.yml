@@ -2,9 +2,8 @@ name: Monitor Tender Offer Spreads
 
 on:
   schedule:
-    # 每个工作日 7:58 北京时间 = UTC 23:58 (前一天)
-    # 周一至周五北京时间 = 周日至周四 UTC
-    - cron: '58 23 * * 0-4'
+    # 临时：每10分钟跑一次，验证cron是否正常触发
+    - cron: '*/10 * * * *'
   workflow_dispatch:
 
 jobs:
