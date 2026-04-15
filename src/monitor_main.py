@@ -26,27 +26,27 @@ logger = logging.getLogger(__name__)
 def run():
     logger.info("=== 价差监控流程开始 ===")
 
-    trading_day = is_trading_day()
+    # 非交易日（节假日）直接退出，避免推送过期数据
+    if not is_trading_day():
+        logger.info("今日非交易日，跳过所有策略")
+        return
 
-    # ===== 要约收购套利监控（仅交易日，仅价差信号）=====
-    if trading_day:
-        logger.info("--- 要约收购套利 ---")
-        active_offers = get_active_offers()
-        if active_offers:
-            logger.info(f"当前活跃要约: {len(active_offers)} 个")
-            signals = evaluate_signals(active_offers)
-            spread_signals = [s for s in signals if s.signal_type == "spread"]
-            if spread_signals:
-                logger.info(f"产生 {len(spread_signals)} 个套利信号")
-                for signal in spread_signals:
-                    logger.info(f"信号: {signal.message}")
-                    notify_spread_signal(signal.result)
-            else:
-                logger.info("无要约收购套利机会")
+    # ===== 要约收购套利监控 =====
+    logger.info("--- 要约收购套利 ---")
+    active_offers = get_active_offers()
+    if active_offers:
+        logger.info(f"当前活跃要约: {len(active_offers)} 个")
+        signals = evaluate_signals(active_offers)
+        spread_signals = [s for s in signals if s.signal_type == "spread"]
+        if spread_signals:
+            logger.info(f"产生 {len(spread_signals)} 个套利信号")
+            for signal in spread_signals:
+                logger.info(f"信号: {signal.message}")
+                notify_spread_signal(signal.result)
         else:
-            logger.info("无活跃要约")
+            logger.info("无要约收购套利机会")
     else:
-        logger.info("今日非交易日，跳过要约收购监控")
+        logger.info("无活跃要约")
 
     # ===== 可转债套利（共用一份快照）=====
     logger.info("--- 可转债套利 ---")

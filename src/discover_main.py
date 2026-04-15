@@ -25,7 +25,7 @@ from .notifier import (
     notify_new_offer_validated,
     notify_announcement_found,
 )
-from .price import get_realtime_price
+from .price import get_realtime_price, is_trading_day
 
 logging.basicConfig(
     level=logging.INFO,
@@ -36,6 +36,11 @@ logger = logging.getLogger(__name__)
 
 def run():
     logger.info("=== 公告发现流程开始 ===")
+
+    # 非交易日（节假日）直接退出
+    if not is_trading_day():
+        logger.info("今日非交易日，跳过公告发现")
+        return
 
     cfg = load_config()
     ann_cfg = cfg.get("announcement", {})
