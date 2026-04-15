@@ -2,10 +2,12 @@
 
 import logging
 
+from .ah_monitor import scan_ah_premium
 from .cb_ipo import scan_cb_ipo
 from .cb_strategy import scan_cb_arbitrage, scan_cb_putback
 from .config import get_active_offers, load_config
 from .notifier import (
+    notify_ah_premium,
     notify_cb_arbitrage,
     notify_cb_ipo,
     notify_cb_putback,
@@ -77,6 +79,13 @@ def run():
         notify_cb_ipo(ipo_results)
     else:
         logger.info("无可打新可转债")
+
+    # ===== AH股溢价（每周一次，默认周二）=====
+    logger.info("--- AH股溢价 ---")
+    ah_results = scan_ah_premium()
+    if ah_results:
+        logger.info(f"发现 {len(ah_results)} 只AH股极端溢价")
+        notify_ah_premium(ah_results)
 
     logger.info("=== 价差监控流程结束 ===")
 

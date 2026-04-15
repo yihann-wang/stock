@@ -45,9 +45,13 @@ cb_putback:
 cb_redemption:
   enabled: false
 
-# AH股溢价监控 - 已禁用（均值回归，不是直接套利）
+# AH股溢价监控（每周一次，周二推送）
 ah_premium:
-  enabled: false
+  enabled: true
+  weekly_day: 1                    # 0=周一 1=周二 ... 6=周日
+  max_premium: 200                 # 溢价率超过此值推送(A股太贵)
+  min_premium: -10                 # 溢价率低于此值推送(A股折价，罕见)
+  max_results: 10
 
 # 要约收购的截止日提醒 / 负价差警告 - 已禁用（非套利）
 # 套利信号(spread)仍保留

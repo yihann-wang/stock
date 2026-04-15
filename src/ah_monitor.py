@@ -1,11 +1,19 @@
-"""AH股溢价监控模块 - 筛选AH溢价率极端偏离的标的"""
+"""AH股溢价监控模块 - 筛选AH溢价率极端偏离的标的（每周推送一次）"""
 
 import logging
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 
 from .config import load_config
 
 logger = logging.getLogger(__name__)
+
+
+def _beijing_weekday() -> int:
+    """返回当前北京时间星期几（0=周一 ... 6=周日）"""
+    utc_now = datetime.now(timezone.utc)
+    beijing_now = utc_now + timedelta(hours=8)
+    return beijing_now.weekday()
 
 
 @dataclass
@@ -27,6 +35,16 @@ def scan_ah_premium() -> list[AHPremiumResult]:
     cfg = load_config().get("ah_premium", {})
     if not cfg.get("enabled", True):
         logger.info("AH股溢价监控已禁用")
+        return []
+
+    # 仅在指定星期推送（默认周二）
+    weekly_day = cfg.get("weekly_day", 1)
+    today_wd = _beijing_weekday()
+    if today_wd != weekly_day:
+        wd_names = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
+        logger.info(
+            f"今日{wd_names[today_wd]}，AH股溢价只在{wd_names[weekly_day]}推送，跳过"
+        )
         return []
 
     max_premium = cfg.get("max_premium", 200)
