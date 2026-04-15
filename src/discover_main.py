@@ -13,14 +13,24 @@ from .announcement import (
     search_announcements,
 )
 from .config import (
+    add_merger,
     add_offer,
     get_known_announcement_ids,
+    get_known_merger_ids,
     load_config,
     load_known_extra_announcements,
     save_known_extra_announcements,
 )
-from .extractor import extract_offer_info, validate_offer
+from .extractor import (
+    extract_merger_info,
+    extract_offer_info,
+    validate_merger,
+    validate_offer,
+)
+from .merger_strategy import calculate_merger_arbitrage
 from .notifier import (
+    notify_new_merger_unvalidated,
+    notify_new_merger_validated,
     notify_new_offer_unvalidated,
     notify_new_offer_validated,
     notify_announcement_found,
@@ -206,13 +216,15 @@ def run():
 
 
 def _scan_extra_announcements(keywords: list, search_days: int):
-    """扫描额外关键词的公告（下修、吸收合并等），发现即推送，不做AI解析"""
-    known_list = load_known_extra_announcements()  # 保留插入顺序
-    known_set = set(known_list)                     # O(1) 查找
-    new_found = False
+    """扫描额外关键词公告: 吸收合并走完整AI流程, 其他走简单推送"""
+    known_extra_list = load_known_extra_announcements()
+    known_extra_set = set(known_extra_list)
+    known_merger_ids = get_known_merger_ids()
+    new_extra_found = False
 
     for kw in keywords:
-        logger.info(f"扫描额外关键词: {kw}")
+        is_merger = ("吸收合并" in kw) or ("换股合并" in kw)
+        logger.info(f"扫描额外关键词: {kw} ({'AI套利分析' if is_merger else '简单推送'})")
         try:
             announcements = search_announcements(keyword=kw, days=search_days)
         except Exception as e:
@@ -222,37 +234,126 @@ def _scan_extra_announcements(keywords: list, search_days: int):
         if not announcements:
             continue
 
+        # 过滤已知
+        dedup_set = known_merger_ids if is_merger else known_extra_set
         new_anns = []
         for ann in announcements:
             ann_id = make_announcement_id(ann)
-            if ann_id not in known_set:
+            if ann_id not in dedup_set:
                 new_anns.append((ann, ann_id))
-                known_list.append(ann_id)
-                known_set.add(ann_id)
-                new_found = True
 
         if not new_anns:
             logger.info(f"  '{kw}': 无新公告")
             continue
 
         logger.info(f"  '{kw}': 发现 {len(new_anns)} 条新公告")
-        for ann, _ in new_anns:
+
+        for ann, ann_id in new_anns:
             pdf_url = get_pdf_url(ann.get("adjunctUrl", ""))
             pub_date = get_announcement_date(ann.get("announcementTime", 0))
-            notify_announcement_found(
-                keyword=kw,
-                title=ann.get("announcementTitle", ""),
-                stock_name=ann.get("secName", ""),
-                stock_code=ann.get("secCode", ""),
-                pub_date=pub_date,
-                pdf_url=pdf_url,
-            )
-            time.sleep(1)
 
-    # 持久化（保留最近500条），避免跨次运行重复推送
-    if new_found:
-        save_known_extra_announcements(known_list)
-        logger.info(f"已保存 {min(len(known_list), 500)} 条额外公告ID")
+            if is_merger:
+                # 走完整AI流程（下载+提取+校验+套利测算+保存）
+                _process_merger_announcement(ann, ann_id, pdf_url, pub_date)
+                known_merger_ids.add(ann_id)
+            else:
+                # 简单推送
+                notify_announcement_found(
+                    keyword=kw,
+                    title=ann.get("announcementTitle", ""),
+                    stock_name=ann.get("secName", ""),
+                    stock_code=ann.get("secCode", ""),
+                    pub_date=pub_date,
+                    pdf_url=pdf_url,
+                )
+                known_extra_list.append(ann_id)
+                known_extra_set.add(ann_id)
+                new_extra_found = True
+
+            time.sleep(2)
+
+    if new_extra_found:
+        save_known_extra_announcements(known_extra_list)
+        logger.info(f"已保存 {min(len(known_extra_list), 500)} 条额外公告ID")
+
+
+def _process_merger_announcement(ann: dict, ann_id: str, pdf_url: str, pub_date: str):
+    """处理吸收合并公告: 下载PDF → AI提取 → 校验 → 套利测算 → 保存 → 推送"""
+    ann_info = {
+        "announcementTitle": ann.get("announcementTitle", ""),
+        "pdf_url": pdf_url,
+        "pub_date": pub_date,
+    }
+
+    logger.info(f"  下载PDF: {pdf_url}")
+    pdf_text = download_and_extract_text(pdf_url)
+    if not pdf_text:
+        notify_new_merger_unvalidated(ann_info, None, ["PDF下载或解析失败"])
+        return
+
+    logger.info(f"  调用AI提取吸收合并信息...")
+    merger_info = extract_merger_info(pdf_text)
+    if not merger_info:
+        notify_new_merger_unvalidated(ann_info, None, ["AI提取失败"])
+        return
+
+    # not_applicable = 非上市公司间合并，跳过
+    if merger_info.get("not_applicable"):
+        logger.info(f"  非上市公司间合并，跳过: {ann.get('announcementTitle', '')}")
+        return
+
+    valid, errors = validate_merger(merger_info)
+
+    merger_record = {
+        "announcement_id": ann_id,
+        "acquirer_code": merger_info.get("acquirer_code", ""),
+        "acquirer_name": merger_info.get("acquirer_name", ""),
+        "target_code": merger_info.get("target_code", ""),
+        "target_name": merger_info.get("target_name", ""),
+        "exchange_ratio": merger_info.get("exchange_ratio"),
+        "record_date": merger_info.get("record_date"),
+        "expected_date": merger_info.get("expected_date"),
+        "cash_option": merger_info.get("cash_option", False),
+        "cash_price": merger_info.get("cash_price"),
+        "notes": merger_info.get("notes", ""),
+        "pdf_url": pdf_url,
+        "discovered_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+    }
+
+    if valid:
+        logger.info(f"  AI校验通过，保存并推送")
+        merger_record["ai_validated"] = True
+        merger_record["status"] = "active"
+        add_merger(merger_record)
+
+        # 实时套利测算
+        arb = None
+        try:
+            result = calculate_merger_arbitrage(merger_record)
+            if result:
+                arb = {
+                    "target_code": result.target_code,
+                    "target_price": result.target_price,
+                    "acquirer_code": result.acquirer_code,
+                    "acquirer_price": result.acquirer_price,
+                    "exchange_ratio": result.exchange_ratio,
+                    "theoretical_value": result.theoretical_value,
+                    "spread": result.spread,
+                    "spread_pct": result.spread_pct,
+                    "annualized_pct": result.annualized_pct,
+                    "days_left": result.days_left,
+                }
+        except Exception as e:
+            logger.warning(f"  套利测算失败: {e}")
+
+        notify_new_merger_validated(ann_info, merger_info, arb)
+    else:
+        logger.warning(f"  AI校验未通过: {errors}")
+        merger_record["ai_validated"] = False
+        merger_record["validation_errors"] = errors
+        merger_record["status"] = "pending_review"
+        add_merger(merger_record)
+        notify_new_merger_unvalidated(ann_info, merger_info, errors)
 
 
 if __name__ == "__main__":

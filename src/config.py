@@ -11,6 +11,7 @@ import yaml
 ROOT_DIR = Path(__file__).resolve().parent.parent
 CONFIG_PATH = ROOT_DIR / "config.yml"
 OFFERS_PATH = ROOT_DIR / "known_offers.json"
+MERGERS_PATH = ROOT_DIR / "known_mergers.json"
 EXTRA_ANNS_PATH = ROOT_DIR / "known_extra_announcements.json"
 
 # 自动加载 .env 文件（本地开发用，GitHub Actions 用 Secrets）
@@ -66,6 +67,49 @@ def get_known_announcement_ids() -> set[str]:
     """获取所有已知公告 ID 集合"""
     data = load_offers()
     return {o["announcement_id"] for o in data["offers"] if "announcement_id" in o}
+
+
+def load_mergers() -> dict:
+    if not MERGERS_PATH.exists():
+        return {"mergers": []}
+    with open(MERGERS_PATH, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def save_mergers(data: dict):
+    data["updated_at"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    with open(MERGERS_PATH, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+def get_active_mergers() -> list[dict]:
+    """活跃的吸收合并（未过实施日期）"""
+    data = load_mergers()
+    today = datetime.now().strftime("%Y-%m-%d")
+    active = []
+    for m in data.get("mergers", []):
+        if m.get("status") != "active":
+            continue
+        exp = m.get("expected_date")
+        if exp and exp < today:
+            m["status"] = "expired"
+            continue
+        active.append(m)
+    save_mergers(data)
+    return active
+
+
+def get_known_merger_ids() -> set[str]:
+    data = load_mergers()
+    return {m["announcement_id"] for m in data.get("mergers", []) if "announcement_id" in m}
+
+
+def add_merger(merger: dict):
+    data = load_mergers()
+    if "mergers" not in data:
+        data["mergers"] = []
+    data["mergers"].append(merger)
+    save_mergers(data)
 
 
 def load_known_extra_announcements() -> list[str]:

@@ -377,6 +377,102 @@ def notify_cb_redemption_alert(results: list):
     send_dingtalk("可转债强赎预警", text)
 
 
+def notify_new_merger_validated(ann: dict, merger: dict, arb: dict | None):
+    """新吸收合并公告 - AI 校验通过"""
+    cash_info = ""
+    if merger.get("cash_option"):
+        cash_info = f"\n- 现金选择权: 有，价格 {merger.get('cash_price', 'N/A')} 元"
+
+    arb_section = ""
+    if arb:
+        arb_section = f"""
+**实时套利测算**
+
+- 被合并方({arb['target_code']}): {arb['target_price']:.2f} 元
+- 存续方({arb['acquirer_code']}): {arb['acquirer_price']:.2f} 元
+- 换股比例: {arb['exchange_ratio']} (1股被合并方换{arb['exchange_ratio']}股存续方)
+- 理论价值: {arb['theoretical_value']:.2f} 元
+- 价差: {'+' if arb['spread']>=0 else ''}{arb['spread']:.2f} 元 ({arb['spread_pct']:.2f}%)
+- 年化: {arb['annualized_pct']:.2f}% (剩余{arb['days_left']}天)
+"""
+
+    text = f"""### 【新吸收合并公告发现】
+
+---
+
+**公告信息**
+
+- 合并方: {merger.get('acquirer_code', '')} {merger.get('acquirer_name', '')}
+- 被合并方: {merger.get('target_code', '')} {merger.get('target_name', '')}
+- 公告: {ann.get('announcementTitle', '')}
+- 发布日期: {ann.get('pub_date', '')}
+- 公告原文: [点击查看PDF]({ann.get('pdf_url', '')})
+
+**AI 提取分析**
+
+- 换股比例: {merger.get('exchange_ratio', 'N/A')}
+- 股权登记日: {merger.get('record_date', 'N/A')}
+- 预计实施日: {merger.get('expected_date', 'N/A')}{cash_info}
+- 背景: {merger.get('notes', 'N/A')}
+{arb_section}
+> AI 置信度: **高** - 已自动加入监控
+
+---"""
+
+    send_dingtalk("新吸收合并公告发现", text)
+
+
+def notify_new_merger_unvalidated(ann: dict, merger: dict | None, errors: list[str]):
+    """新吸收合并公告 - 需人工确认"""
+    merger_info = ""
+    if merger:
+        merger_info = f"""
+**AI 提取结果**
+
+- 合并方: {merger.get('acquirer_code', '[未能提取]')} {merger.get('acquirer_name', '')}
+- 被合并方: {merger.get('target_code', '[未能提取]')} {merger.get('target_name', '')}
+- 换股比例: {merger.get('exchange_ratio', '[未能提取]')}
+- 预计实施日: {merger.get('expected_date', '[未能提取]')}
+"""
+
+    error_str = "、".join(errors) if errors else "AI 解析失败"
+
+    text = f"""### 【新吸收合并公告 - 需人工确认】
+
+---
+
+- 公告: {ann.get('announcementTitle', '')}
+- 公告原文: [点击查看PDF]({ann.get('pdf_url', '')})
+{merger_info}
+> 缺失/异常字段: {error_str}
+> 请查看 PDF 原文确认
+
+---"""
+
+    send_dingtalk("新吸收合并公告 - 需人工确认", text)
+
+
+def notify_merger_spread_signal(result):
+    """吸收合并换股套利日常信号"""
+    text = f"""### 【吸收合并换股套利】
+
+---
+
+- 被合并方: {result.target_code} {result.target_name} 现价 {result.target_price:.2f}
+- 存续方: {result.acquirer_code} {result.acquirer_name} 现价 {result.acquirer_price:.2f}
+- 换股比例: {result.exchange_ratio}
+- 理论价值: {result.theoretical_value:.2f}
+- 价差: +{result.spread:.2f} 元 (**{result.spread_pct:.2f}%**)
+- 年化: **{result.annualized_pct:.2f}%**
+- 剩余: {result.days_left} 天 ({result.expected_date} 实施)
+
+> 操作: 买入被合并方股票 → 等待换股实施 → 按比例自动转为存续方股票
+
+---"""
+
+    send_dingtalk("吸收合并换股套利", text)
+
+
 def notify_announcement_found(keyword: str, title: str, stock_name: str,
                                stock_code: str, pub_date: str, pdf_url: str):
     """通用公告发现通知（下修、吸收合并等）"""

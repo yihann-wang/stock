@@ -5,12 +5,14 @@ import logging
 from .ah_monitor import scan_ah_premium
 from .cb_ipo import scan_cb_ipo
 from .cb_strategy import scan_cb_arbitrage, scan_cb_putback
-from .config import get_active_offers, load_config
+from .config import get_active_mergers, get_active_offers, load_config
+from .merger_strategy import evaluate_merger_signals
 from .notifier import (
     notify_ah_premium,
     notify_cb_arbitrage,
     notify_cb_ipo,
     notify_cb_putback,
+    notify_merger_spread_signal,
     notify_spread_signal,
 )
 from .price import is_trading_day
@@ -47,6 +49,22 @@ def run():
             logger.info("无要约收购套利机会")
     else:
         logger.info("无活跃要约")
+
+    # ===== 吸收合并套利监控 =====
+    logger.info("--- 吸收合并套利 ---")
+    active_mergers = get_active_mergers()
+    if active_mergers:
+        logger.info(f"当前活跃吸收合并: {len(active_mergers)} 个")
+        merger_signals = evaluate_merger_signals(active_mergers)
+        if merger_signals:
+            logger.info(f"产生 {len(merger_signals)} 个吸收合并套利信号")
+            for signal in merger_signals:
+                logger.info(f"信号: {signal.message}")
+                notify_merger_spread_signal(signal.result)
+        else:
+            logger.info("无吸收合并套利机会")
+    else:
+        logger.info("无活跃吸收合并")
 
     # ===== 可转债套利（共用一份快照）=====
     logger.info("--- 可转债套利 ---")
