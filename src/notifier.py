@@ -63,6 +63,28 @@ def send_dingtalk(title: str, markdown_text: str) -> bool:
 # ==================== 消息模板 ====================
 
 
+def notify_error(stage: str, error: str, detail: str = ""):
+    """系统错误通知 - 当某个策略数据获取失败/异常时推送"""
+    detail_section = f"\n\n**详细信息**\n```\n{detail[:500]}\n```" if detail else ""
+    text = f"""### 【系统错误告警】
+
+---
+
+- 出错环节: **{stage}**
+- 错误信息: {error}
+{detail_section}
+
+> 该策略本次未推送结果。其他策略不受影响。
+> 若持续出现，请检查代码或数据源。
+
+---"""
+
+    try:
+        send_dingtalk(f"系统错误: {stage}", text)
+    except Exception as e:
+        logger.error(f"错误通知本身发送失败: {e}")
+
+
 def notify_new_offer_validated(ann: dict, offer: dict, arb: dict | None):
     """新公告发现 - AI 校验通过"""
     offer_type_map = {"full": "全面要约", "partial": "部分要约"}

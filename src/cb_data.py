@@ -56,6 +56,16 @@ def get_cb_list() -> list[dict]:
                 time.sleep(3)
 
     logger.error(f"可转债数据获取最终失败: {last_err}")
+    # 钉钉推送错误通知
+    try:
+        from .notifier import notify_error
+        notify_error(
+            stage="可转债数据获取",
+            error="东方财富数据中心API 3次重试均失败",
+            detail=str(last_err),
+        )
+    except Exception as e:
+        logger.warning(f"错误通知发送失败: {e}")
     return []
 
 
