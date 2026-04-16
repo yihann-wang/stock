@@ -1,6 +1,7 @@
 """可转债数据获取模块 - 东方财富数据中心 + 实时行情(quoteColumns)一次请求获取全部数据"""
 
 import logging
+import time
 from datetime import datetime
 
 import requests
@@ -40,15 +41,21 @@ def get_cb_list() -> list[dict]:
       [{bond_code, bond_name, bond_price, stock_code, stock_name,
         convert_price, convert_value, premium_rate(%), volume(万元)}, ...]
     """
-    try:
-        session = _new_session()
-        result = _fetch_datacenter_realtime(session)
-        if result:
-            logger.info(f"可转债数据获取成功: {len(result)} 只")
-            return result
-    except Exception as e:
-        logger.error(f"可转债数据获取失败: {e}")
+    last_err = None
+    for attempt in range(3):
+        try:
+            session = _new_session()
+            result = _fetch_datacenter_realtime(session)
+            if result:
+                logger.info(f"可转债数据获取成功: {len(result)} 只")
+                return result
+        except Exception as e:
+            last_err = e
+            logger.warning(f"可转债数据获取失败 (尝试 {attempt + 1}/3): {e}")
+            if attempt < 2:
+                time.sleep(3)
 
+    logger.error(f"可转债数据获取最终失败: {last_err}")
     return []
 
 
@@ -91,7 +98,8 @@ def _fetch_datacenter_realtime(session: requests.Session) -> list[dict]:
             "client": "WEB",
         }
 
-        resp = session.get(url, params=params, timeout=15)
+        # 单页超时45秒（4页累计可能慢）
+        resp = session.get(url, params=params, timeout=45)
         data = resp.json()
 
         if not data.get("success"):
