@@ -3,15 +3,24 @@
 import logging
 import traceback
 
+from datetime import datetime, timedelta, timezone
+
 from .ah_monitor import scan_ah_premium
 from .cb_ipo import scan_cb_ipo
-from .cb_strategy import scan_cb_arbitrage, scan_cb_putback
-from .config import get_active_mergers, get_active_offers, load_config
+from .cb_strategy import scan_cb_arbitrage, scan_cb_maturity_play, scan_cb_putback
+from .config import (
+    get_active_mergers,
+    get_active_offers,
+    load_config,
+    load_known_maturity_plays,
+    save_known_maturity_plays,
+)
 from .merger_strategy import evaluate_merger_signals
 from .notifier import (
     notify_ah_premium,
     notify_cb_arbitrage,
     notify_cb_ipo,
+    notify_cb_maturity_play,
     notify_cb_putback,
     notify_error,
     notify_merger_spread_signal,
@@ -19,6 +28,12 @@ from .notifier import (
 )
 from .price import is_trading_day
 from .strategy import evaluate_signals
+
+
+def _beijing_weekday() -> int:
+    """北京时间星期几 (0=周一, 6=周日)"""
+    bj = datetime.now(timezone.utc) + timedelta(hours=8)
+    return bj.weekday()
 
 logging.basicConfig(
     level=logging.INFO,
@@ -88,12 +103,14 @@ def run():
     _safe_run("吸收合并套利", _merger)
 
     # ===== 可转债套利（共用一份快照）=====
+    cb_list_holder = {"data": None}
+
     def _cb_arbitrage():
         logger.info("--- 可转债套利 ---")
         from .cb_data import get_cb_list
         cb_list = get_cb_list()
+        cb_list_holder["data"] = cb_list
         if not cb_list:
-            # cb_data 内部已经发了错误通知，这里不重复
             logger.warning("可转债数据获取失败，跳过")
             return
 
@@ -111,6 +128,46 @@ def run():
         else:
             logger.info("无回售套利机会")
     _safe_run("可转债套利", _cb_arbitrage)
+
+    # ===== 可转债到期博弈套利（每周二，永久去重）=====
+    def _cb_maturity_play():
+        cfg = load_config().get("cb_maturity_play", {})
+        if not cfg.get("enabled", True):
+            return
+        weekly_day = cfg.get("weekly_day", 1)
+        wd = _beijing_weekday()
+        if wd != weekly_day:
+            names = ["周一","周二","周三","周四","周五","周六","周日"]
+            logger.info(f"--- 到期博弈套利 (今日{names[wd]}, 仅{names[weekly_day]}推送，跳过) ---")
+            return
+
+        logger.info("--- 可转债到期博弈套利 ---")
+        cb_list = cb_list_holder["data"]
+        if not cb_list:
+            logger.warning("可转债数据获取失败，跳过到期博弈扫描")
+            return
+
+        all_results = scan_cb_maturity_play(cb_list)
+        if not all_results:
+            logger.info("无到期博弈机会")
+            return
+
+        # 持久化去重: 推送过的不再推
+        known = load_known_maturity_plays()
+        new_results = [r for r in all_results if r.bond_code not in known]
+        if not new_results:
+            logger.info(f"扫到 {len(all_results)} 只，但均已推送过")
+            return
+
+        logger.info(f"首次发现 {len(new_results)} 只到期博弈机会")
+        notify_cb_maturity_play(new_results)
+
+        # 标记为已推送
+        for r in new_results:
+            known.add(r.bond_code)
+        save_known_maturity_plays(known)
+        logger.info(f"已记录 {len(known)} 只历史推送")
+    _safe_run("可转债到期博弈套利", _cb_maturity_play)
 
     # ===== 可转债打新 =====
     def _cb_ipo():

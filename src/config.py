@@ -13,6 +13,7 @@ CONFIG_PATH = ROOT_DIR / "config.yml"
 OFFERS_PATH = ROOT_DIR / "known_offers.json"
 MERGERS_PATH = ROOT_DIR / "known_mergers.json"
 EXTRA_ANNS_PATH = ROOT_DIR / "known_extra_announcements.json"
+MATURITY_PLAYS_PATH = ROOT_DIR / "known_maturity_plays.json"
 
 # 自动加载 .env 文件（本地开发用，GitHub Actions 用 Secrets）
 _env_file = ROOT_DIR / ".env"
@@ -110,6 +111,30 @@ def add_merger(merger: dict):
         data["mergers"] = []
     data["mergers"].append(merger)
     save_mergers(data)
+
+
+def load_known_maturity_plays() -> set[str]:
+    """加载已推送过的到期套利债券代码"""
+    if not MATURITY_PLAYS_PATH.exists():
+        return set()
+    try:
+        with open(MATURITY_PLAYS_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return set(data.get("bond_codes", []))
+    except Exception:
+        return set()
+
+
+def save_known_maturity_plays(codes: set[str]):
+    """保存已推送过的到期套利债券代码"""
+    with open(MATURITY_PLAYS_PATH, "w", encoding="utf-8") as f:
+        json.dump(
+            {
+                "bond_codes": sorted(codes),
+                "updated_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+            },
+            f, ensure_ascii=False, indent=2,
+        )
 
 
 def load_known_extra_announcements() -> list[str]:

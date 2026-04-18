@@ -31,6 +31,17 @@ cb_arbitrage:
   max_bond_price: 9999
   max_results: 10
 
+# 可转债到期博弈套利（每周二推送，永久去重）
+# 到期1年内+转债价低+高溢价 → 公司有动力下修/拉股价 → 买入博弈
+cb_maturity_play:
+  enabled: true
+  weekly_day: 1                  # 0=周一 1=周二 ... 6=周日
+  max_years_to_expire: 1.0       # 剩余年限上限(到期窗口)
+  max_bond_price: 105            # 转债价上限(安全垫)
+  min_premium_rate: 100          # 溢价率下限(高溢价才有博弈空间)
+  min_volume: 200                # 最小成交额(万元)
+  max_results: 20
+
 # 可转债打新（100%中签按配售，上市平均涨10-20%）
 cb_ipo:
   enabled: true

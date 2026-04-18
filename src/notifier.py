@@ -367,6 +367,42 @@ def notify_cb_putback(results: list):
     send_dingtalk("可转债回售观察名单", text)
 
 
+def notify_cb_maturity_play(results: list):
+    """可转债到期博弈套利信号（首次发现，永久去重）"""
+    if not results:
+        return
+
+    rows = []
+    for r in results:
+        rows.append(
+            f"- **{r.bond_name}**({r.bond_code}) | "
+            f"剩余 **{r.days_to_expire}天** ({r.expire_date}) | "
+            f"转债价 **{r.bond_price:.2f}** | "
+            f"溢价 {r.premium_rate:.0f}% | "
+            f"正股 {r.stock_name}({r.stock_code}) {r.stock_price:.2f} | "
+            f"转股价 {r.convert_price:.2f} | "
+            f"成交 {r.volume:.0f}万"
+        )
+    rows_text = "\n".join(rows)
+
+    text = f"""### 【可转债到期博弈套利】
+
+---
+
+> **首次发现** {len(results)} 只到期1年内的低价高溢价转债
+
+{rows_text}
+
+> **逻辑**: 接近到期 + 转债价低 + 高溢价 = 公司面临偿付压力
+> **预期**: 公司可能主动① 下修转股价(转债大涨) ② 拉抬正股(转股价值上升)
+> **底线**: 转债价低，最差按面值+利息到期偿付，下跌空间有限
+> **去重**: 已推送过的债券不再重复推送
+
+---"""
+
+    send_dingtalk("可转债到期博弈套利", text)
+
+
 def notify_cb_redemption_alert(results: list):
     """可转债强赎预警 - 正股接近或超过转股价130%"""
     if not results:

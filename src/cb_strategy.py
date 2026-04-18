@@ -57,6 +57,23 @@ class CBRedemptionAlert:
     ratio: float               # 正股价/转股价 的百分比(如 135 表示135%)
 
 
+@dataclass
+class CBMaturityPlayResult:
+    """可转债到期博弈套利结果"""
+    bond_code: str
+    bond_name: str
+    bond_price: float          # 转债现价(元), 应<=阈值
+    stock_code: str
+    stock_name: str
+    stock_price: float         # 正股现价
+    convert_price: float       # 当前转股价
+    convert_value: float       # 转股价值
+    premium_rate: float        # 转股溢价率(%), 应>=阈值
+    days_to_expire: int        # 距到期天数
+    expire_date: str
+    volume: float
+
+
 def scan_cb_arbitrage(cb_list: list[dict] | None = None) -> list[CBArbitrageResult]:
     """
     扫描全市场可转债，筛选负溢价(折价)套利机会。
@@ -233,6 +250,95 @@ def scan_cb_putback(cb_list: list[dict] | None = None) -> list[CBPutbackResult]:
 
     if results:
         logger.info(f"发现 {len(results)} 只可转债回售套利机会")
+    return results
+
+
+def scan_cb_maturity_play(cb_list: list[dict] | None = None) -> list[CBMaturityPlayResult]:
+    """
+    扫描可转债到期博弈套利机会。
+
+    逻辑:
+      到期1年内 + 转债价低(<=105) + 高溢价(>=100%) → 公司面临到期偿付压力，
+      有强动力下修转股价或拉抬正股，刺激投资者转股以避免现金赎回。
+      此时买入转债，等待:
+        ① 公司公告下修转股价 → 转债大涨
+        ② 公司主动拉抬股价 → 转股价值上升
+        ③ 即使啥都没发生，转债价低安全垫高，最差按面值+利息到期偿付
+
+    筛选:
+      - 剩余年限 <= 1 年
+      - 转债现价 <= max_bond_price (默认105)
+      - 转股溢价率 >= min_premium_rate (默认100)
+      - 成交额 >= min_volume
+    """
+    cfg = load_config().get("cb_maturity_play", {})
+    if not cfg.get("enabled", True):
+        return []
+
+    max_years = cfg.get("max_years_to_expire", 1.0)
+    max_bond_price = cfg.get("max_bond_price", 105)
+    min_premium_rate = cfg.get("min_premium_rate", 100)
+    min_volume = cfg.get("min_volume", 200)
+    max_results = cfg.get("max_results", 20)
+
+    if cb_list is None:
+        cb_list = get_cb_list()
+    if not cb_list:
+        return []
+
+    today = datetime.now().date()
+    results = []
+    for cb in cb_list:
+        bp = cb.get("bond_price", 0)
+        cp = cb.get("convert_price", 0)
+        cv = cb.get("convert_value", 0)
+        premium = cb.get("premium_rate", 0)
+        volume = cb.get("volume", 0)
+        expire_str = cb.get("expire_date", "")
+
+        if bp <= 0 or bp > max_bond_price:
+            continue
+        if cp <= 0 or cv <= 0:
+            continue
+        if premium < min_premium_rate:
+            continue
+        if volume < min_volume:
+            continue
+        if not expire_str:
+            continue
+
+        try:
+            exp_date = datetime.strptime(expire_str, "%Y-%m-%d").date()
+        except ValueError:
+            continue
+
+        days_to_expire = (exp_date - today).days
+        if days_to_expire <= 0 or days_to_expire > max_years * 365:
+            continue
+
+        stock_price = cv * cp / 100  # 反推正股价
+
+        results.append(CBMaturityPlayResult(
+            bond_code=cb.get("bond_code", ""),
+            bond_name=cb.get("bond_name", ""),
+            bond_price=bp,
+            stock_code=cb.get("stock_code", ""),
+            stock_name=cb.get("stock_name", ""),
+            stock_price=round(stock_price, 2),
+            convert_price=cp,
+            convert_value=round(cv, 2),
+            premium_rate=round(premium, 2),
+            days_to_expire=days_to_expire,
+            expire_date=expire_str,
+            volume=volume,
+        ))
+
+    # 按"剩余天数升序"排序（越接近到期，公司越急）
+    results.sort(key=lambda x: x.days_to_expire)
+    results = results[:max_results]
+
+    if results:
+        logger.info(f"发现 {len(results)} 只到期博弈套利机会")
     return results
 
 
