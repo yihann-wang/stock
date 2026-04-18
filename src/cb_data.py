@@ -71,13 +71,41 @@ def get_cb_list() -> list[dict]:
     return []
 
 
-def _get_blacklist() -> set[str]:
-    """加载手动配置的可转债黑名单（已退市/异常但API未更新的）"""
+def _get_manual_blacklist() -> set[str]:
+    """手动配置的黑名单（兜底用，正常情况留空）"""
     try:
         cfg = load_config().get("cb_blacklist", {})
         return set(str(c) for c in cfg.get("bond_codes", []))
     except Exception:
         return set()
+
+
+def _get_announced_redeem_codes() -> set[str]:
+    """
+    自动从集思录获取「已公告强赎」的可转债代码。
+
+    这些转债公司已公告将提前赎回，最终未及时转股/卖出的会按面值赎回，
+    高价转债买入会亏，必须从所有套利策略中排除。
+    """
+    try:
+        import akshare as ak
+        df = ak.bond_cb_redeem_jsl()
+        if df is None or df.empty:
+            return set()
+        # "强赎状态" 包含 "已公告" 字样的
+        mask = df["强赎状态"].astype(str).str.contains("已公告", na=False)
+        codes = set(df[mask]["代码"].astype(str).tolist())
+        if codes:
+            logger.info(f"集思录已公告强赎转债: {len(codes)} 只 → 自动过滤")
+        return codes
+    except Exception as e:
+        logger.warning(f"获取已公告强赎列表失败: {e}")
+        return set()
+
+
+def _get_blacklist() -> set[str]:
+    """合并的可转债黑名单：手动 + 自动（已公告强赎）"""
+    return _get_manual_blacklist() | _get_announced_redeem_codes()
 
 
 def _fetch_datacenter_realtime(session: requests.Session) -> list[dict]:
