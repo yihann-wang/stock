@@ -12,8 +12,6 @@ from .config import (
     get_active_mergers,
     get_active_offers,
     load_config,
-    load_known_maturity_plays,
-    save_known_maturity_plays,
 )
 from .merger_strategy import evaluate_merger_signals
 from .notifier import (
@@ -129,7 +127,7 @@ def run():
             logger.info("无回售套利机会")
     _safe_run("可转债套利", _cb_arbitrage)
 
-    # ===== 可转债到期博弈套利（每周二，永久去重）=====
+    # ===== 可转债到期博弈套利（每周二，每次推送全部符合的）=====
     def _cb_maturity_play():
         cfg = load_config().get("cb_maturity_play", {})
         if not cfg.get("enabled", True):
@@ -147,26 +145,13 @@ def run():
             logger.warning("可转债数据获取失败，跳过到期博弈扫描")
             return
 
-        all_results = scan_cb_maturity_play(cb_list)
-        if not all_results:
+        results = scan_cb_maturity_play(cb_list)
+        if not results:
             logger.info("无到期博弈机会")
             return
 
-        # 持久化去重: 推送过的不再推
-        known = load_known_maturity_plays()
-        new_results = [r for r in all_results if r.bond_code not in known]
-        if not new_results:
-            logger.info(f"扫到 {len(all_results)} 只，但均已推送过")
-            return
-
-        logger.info(f"首次发现 {len(new_results)} 只到期博弈机会")
-        notify_cb_maturity_play(new_results)
-
-        # 标记为已推送
-        for r in new_results:
-            known.add(r.bond_code)
-        save_known_maturity_plays(known)
-        logger.info(f"已记录 {len(known)} 只历史推送")
+        logger.info(f"发现 {len(results)} 只到期博弈机会，全部推送（不去重）")
+        notify_cb_maturity_play(results)
     _safe_run("可转债到期博弈套利", _cb_maturity_play)
 
     # ===== 可转债打新 =====

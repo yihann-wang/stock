@@ -368,7 +368,7 @@ def notify_cb_putback(results: list):
 
 
 def notify_cb_maturity_play(results: list):
-    """可转债到期博弈套利信号（首次发现，永久去重）"""
+    """可转债到期博弈套利信号（每周二全量推送，不去重）"""
     if not results:
         return
 
@@ -389,14 +389,13 @@ def notify_cb_maturity_play(results: list):
 
 ---
 
-> **首次发现** {len(results)} 只到期1年内的低价高溢价转债
+> 当前 {len(results)} 只到期1年内的低价高溢价转债
 
 {rows_text}
 
 > **逻辑**: 接近到期 + 转债价低 + 高溢价 = 公司面临偿付压力
 > **预期**: 公司可能主动① 下修转股价(转债大涨) ② 拉抬正股(转股价值上升)
 > **底线**: 转债价低，最差按面值+利息到期偿付，下跌空间有限
-> **去重**: 已推送过的债券不再重复推送
 
 ---"""
 
