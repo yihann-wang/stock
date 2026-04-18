@@ -151,12 +151,40 @@ def get_realtime_price(stock_code: str, retries: int = 3) -> dict | None:
 
 
 def is_trading_day() -> bool:
-    """判断今天是否为交易日"""
+    """
+    判断今天是否为交易日。
+
+    策略: 重试3次访问新浪交易日历；全失败时降级到本地判断
+    （周末默认非交易日，工作日默认是交易日）。
+    宁可漏推也不错推，避免周末/节假日错误推送。
+    """
+    today = time.strftime("%Y-%m-%d")
+    last_err = None
+    for attempt in range(3):
+        try:
+            df = ak.tool_trade_date_hist_sina()
+            trade_dates = df["trade_date"].astype(str).tolist()
+            return today in trade_dates
+        except Exception as e:
+            last_err = e
+            logger.warning(f"获取交易日历失败 (尝试 {attempt + 1}/3): {e}")
+            if attempt < 2:
+                time.sleep(2)
+
+    # 降级: 周一至周五默认交易日，周末默认非交易日（注意:无法识别调休）
+    weekday = time.localtime().tm_wday  # 0=周一, 6=周日
+    is_weekday = weekday < 5
+    logger.error(
+        f"交易日历API最终失败({last_err})，降级判断: 今日{'工作日' if is_weekday else '周末'}"
+    )
+    # 推送告警让用户知道用了降级判断
     try:
-        df = ak.tool_trade_date_hist_sina()
-        today = time.strftime("%Y-%m-%d")
-        trade_dates = df["trade_date"].astype(str).tolist()
-        return today in trade_dates
-    except Exception as e:
-        logger.warning(f"获取交易日历失败，默认为交易日: {e}")
-        return True
+        from .notifier import notify_error
+        notify_error(
+            stage="交易日历API",
+            error="新浪交易日历3次重试均失败，已降级用本地周末判断",
+            detail=f"{str(last_err)}\n今日: weekday={weekday}, 判定为{'工作日(继续)' if is_weekday else '周末(跳过)'}\n注意: 本地降级无法识别调休，可能漏掉调休交易日",
+        )
+    except Exception:
+        pass
+    return is_weekday
