@@ -128,6 +128,8 @@ def _fetch_datacenter_realtime(session: requests.Session) -> list[dict]:
             ts = (item.get("TRANSFER_START_DATE") or "")[:10]
             if ts and ts > today:
                 continue
+            # 注: 不能用 EXECUTE_END_DATE 判断退市，该字段是历史强赎触发记录,
+            # 很多公司触发后最终未行使赎回权，转债仍在正常交易
 
             bond_price = _safe_float(item.get("BOND_PRICE"))
             convert_value = _safe_float(item.get("CONVERT_VALUE"))
