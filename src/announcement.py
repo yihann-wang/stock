@@ -50,14 +50,35 @@ def search_announcements(keyword: str = "要约收购报告书", days: int = 7) 
             "pageNum": page,
             "pageSize": 10,
         }
-        try:
-            resp = requests.post(
-                CNINFO_SEARCH_URL, data=params, headers=HEADERS, timeout=30
-            )
-            resp.raise_for_status()
-            data = resp.json()
-        except Exception as e:
-            logger.error(f"巨潮 API 请求失败: {e}")
+        # 单页带重试: 巨潮偶尔慢，重试3次
+        data = None
+        last_err = None
+        for attempt in range(3):
+            try:
+                resp = requests.post(
+                    CNINFO_SEARCH_URL, data=params, headers=HEADERS, timeout=30
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                break
+            except Exception as e:
+                last_err = e
+                logger.warning(f"巨潮API请求失败 page={page} (尝试 {attempt+1}/3): {e}")
+                if attempt < 2:
+                    time.sleep(2)
+        if data is None:
+            logger.error(f"巨潮 API 请求最终失败 page={page}: {last_err}")
+            # 仅在第一页就失败时推送告警(完全没拿到数据)
+            if page == 1:
+                try:
+                    from .notifier import notify_error
+                    notify_error(
+                        stage=f"巨潮公告搜索 ({keyword})",
+                        error="巨潮API 3次重试均失败",
+                        detail=str(last_err),
+                    )
+                except Exception:
+                    pass
             break
 
         announcements = data.get("announcements", [])

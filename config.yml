@@ -38,7 +38,7 @@ cb_maturity_play:
   weekly_day: 1                  # 0=周一 1=周二 ... 6=周日
   max_years_to_expire: 1.0       # 剩余年限上限(到期窗口)
   max_bond_price: 200            # 转债价上限
-  min_premium_rate: 60           # 溢价率下限(高溢价才有博弈空间)
+  min_premium_rate: 100          # 溢价率下限(高溢价才有博弈空间)
   min_volume: 200                # 最小成交额(万元)
   max_results: 20
 

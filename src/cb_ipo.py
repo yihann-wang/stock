@@ -47,13 +47,29 @@ def scan_cb_ipo() -> list[CBIPOResult]:
         logger.warning("akshare 未安装，跳过可转债打新扫描")
         return []
 
-    try:
-        df = ak.bond_zh_cov()
-    except Exception as e:
-        logger.warning(f"可转债打新数据获取失败: {e}")
-        return []
-
+    import time as _t
+    df = None
+    last_err = None
+    for attempt in range(3):
+        try:
+            df = ak.bond_zh_cov()
+            if df is not None and not df.empty:
+                break
+        except Exception as e:
+            last_err = e
+            logger.warning(f"可转债打新数据获取失败 (尝试 {attempt+1}/3): {e}")
+            if attempt < 2:
+                _t.sleep(2)
     if df is None or df.empty:
+        try:
+            from .notifier import notify_error
+            notify_error(
+                stage="可转债打新数据获取",
+                error="akshare bond_zh_cov 3次重试均失败",
+                detail=str(last_err) if last_err else "返回空数据",
+            )
+        except Exception:
+            pass
         return []
 
     # 用列名查找（稳健性优于硬编码下标）
