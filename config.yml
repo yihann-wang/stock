@@ -42,6 +42,12 @@ cb_maturity_play:
   min_volume: 200                # 最小成交额(万元)
   max_results: 20
 
+# 全局可转债黑名单（数据API未及时更新退市/特殊处理的债，手动排除）
+cb_blacklist:
+  bond_codes:
+    - "123072"   # 振德转债 - 2026-04 显示DR/退市标识
+  reason: "数据中心DELIST_DATE未及时更新或前端显示DR标识，手动排除"
+
 # 可转债打新（100%中签按配售，上市平均涨10-20%）
 cb_ipo:
   enabled: true

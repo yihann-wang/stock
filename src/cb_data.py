@@ -6,6 +6,8 @@ from datetime import datetime
 
 import requests
 
+from .config import load_config
+
 logger = logging.getLogger(__name__)
 
 
@@ -69,6 +71,15 @@ def get_cb_list() -> list[dict]:
     return []
 
 
+def _get_blacklist() -> set[str]:
+    """加载手动配置的可转债黑名单（已退市/异常但API未更新的）"""
+    try:
+        cfg = load_config().get("cb_blacklist", {})
+        return set(str(c) for c in cfg.get("bond_codes", []))
+    except Exception:
+        return set()
+
+
 def _fetch_datacenter_realtime(session: requests.Session) -> list[dict]:
     """
     东方财富数据中心 + 实时行情叠加。
@@ -82,6 +93,7 @@ def _fetch_datacenter_realtime(session: requests.Session) -> list[dict]:
     """
     url = "https://datacenter-web.eastmoney.com/api/data/v1/get"
     today = datetime.now().strftime("%Y-%m-%d")
+    blacklist = _get_blacklist()
     all_results = []
 
     for page in range(1, 5):
@@ -120,7 +132,10 @@ def _fetch_datacenter_realtime(session: requests.Session) -> list[dict]:
             break
 
         for item in items:
-            # 过滤: 已退市 / 未上市 / 转股未开始
+            # 过滤: 已退市 / 未上市 / 转股未开始 / 手动黑名单
+            bond_code = str(item.get("SECURITY_CODE", ""))
+            if bond_code in blacklist:
+                continue
             if item.get("DELIST_DATE"):
                 continue
             if not item.get("LISTING_DATE"):
