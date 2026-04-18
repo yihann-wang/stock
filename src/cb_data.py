@@ -108,6 +108,14 @@ def _get_blacklist() -> set[str]:
     return _get_manual_blacklist() | _get_announced_redeem_codes()
 
 
+def _get_name_overrides() -> dict:
+    """从 config.yml 加载名称纠错映射 {债码: [转债名, 正股名]}"""
+    try:
+        return load_config().get("cb_name_overrides", {}) or {}
+    except Exception:
+        return {}
+
+
 def _fetch_datacenter_realtime(session: requests.Session) -> list[dict]:
     """
     东方财富数据中心 + 实时行情叠加。
@@ -122,6 +130,7 @@ def _fetch_datacenter_realtime(session: requests.Session) -> list[dict]:
     url = "https://datacenter-web.eastmoney.com/api/data/v1/get"
     today = datetime.now().strftime("%Y-%m-%d")
     blacklist = _get_blacklist()
+    name_overrides = _get_name_overrides()
     all_results = []
 
     for page in range(1, 5):
@@ -183,12 +192,17 @@ def _fetch_datacenter_realtime(session: requests.Session) -> list[dict]:
             if bond_price <= 0 or convert_value <= 0:
                 continue
 
+            # 名称纠错（东方财富数据偶有错误，按 config.cb_name_overrides 覆盖）
+            override = name_overrides.get(bond_code) or []
+            bond_name = override[0] if len(override) > 0 else item.get("SECURITY_NAME_ABBR", "")
+            stock_name = override[1] if len(override) > 1 else item.get("SECURITY_SHORT_NAME", "")
+
             all_results.append({
                 "bond_code": item.get("SECURITY_CODE", ""),
-                "bond_name": item.get("SECURITY_NAME_ABBR", ""),
+                "bond_name": bond_name,
                 "bond_price": bond_price,
                 "stock_code": item.get("CONVERT_STOCK_CODE", ""),
-                "stock_name": item.get("SECURITY_SHORT_NAME", ""),
+                "stock_name": stock_name,
                 "convert_price": convert_price,
                 "convert_value": round(convert_value, 3),
                 "premium_rate": round(premium_rate, 2),
