@@ -152,13 +152,15 @@ def get_realtime_price(stock_code: str, retries: int = 3) -> dict | None:
 
 def is_trading_day() -> bool:
     """
-    判断今天是否为交易日。
+    判断今天是否为交易日（北京时间）。
 
-    策略: 重试3次访问新浪交易日历；全失败时降级到本地判断
-    （周末默认非交易日，工作日默认是交易日）。
-    宁可漏推也不错推，避免周末/节假日错误推送。
+    策略: 重试3次访问新浪交易日历；全失败时降级到本地周末判断。
+    重要: 必须用北京时间判断，GitHub Actions 容器是 UTC 时间，
+    UTC 周日 22:58 = 北京周一 6:58，按 UTC 判断会误以为是周末。
     """
-    today = time.strftime("%Y-%m-%d")
+    from datetime import datetime, timedelta, timezone
+    bj = datetime.now(timezone.utc) + timedelta(hours=8)
+    today = bj.strftime("%Y-%m-%d")
     last_err = None
     for attempt in range(3):
         try:
@@ -171,11 +173,11 @@ def is_trading_day() -> bool:
             if attempt < 2:
                 time.sleep(2)
 
-    # 降级: 周一至周五默认交易日，周末默认非交易日（注意:无法识别调休）
-    weekday = time.localtime().tm_wday  # 0=周一, 6=周日
+    # 降级: 北京时间周一至周五默认交易日（无法识别调休）
+    weekday = bj.weekday()  # 0=周一, 6=周日
     is_weekday = weekday < 5
     logger.error(
-        f"交易日历API最终失败({last_err})，降级判断: 今日{'工作日' if is_weekday else '周末'}"
+        f"交易日历API最终失败({last_err})，降级判断(北京时间): {'工作日' if is_weekday else '周末'} (weekday={weekday})"
     )
     # 推送告警让用户知道用了降级判断
     try:
