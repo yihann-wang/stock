@@ -35,7 +35,64 @@
       "discovered_at": "2026-04-11T15:41:10",
       "ai_validated": true,
       "status": "active"
+    },
+    {
+      "announcement_id": "cninfo_2026-04-26_001331_1225184701",
+      "stock_code": "001331",
+      "stock_name": "胜通能源",
+      "offer_price": 13.28,
+      "offer_start": null,
+      "offer_end": null,
+      "type": "partial",
+      "condition": "none",
+      "min_accept_ratio": 0,
+      "partial_pct": 15,
+      "acquirer": "七腾机器人有限公司",
+      "notes": "收购人及其一致行动人协议受让29.99%股份后，由七腾机器人进一步发出15%的要约收购以增强控制权。",
+      "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-04-27/1225184701.PDF",
+      "discovered_at": "2026-04-27T23:51:05",
+      "ai_validated": false,
+      "validation_errors": [
+        "截止日期缺失"
+      ],
+      "status": "pending_review"
+    },
+    {
+      "announcement_id": "cninfo_2026-04-26_001331_1225184703",
+      "stock_code": "001331",
+      "stock_name": "胜通能源",
+      "offer_price": 13.28,
+      "offer_start": "2026-04-28",
+      "offer_end": "2026-05-27",
+      "type": "partial",
+      "condition": "none",
+      "min_accept_ratio": 0,
+      "partial_pct": 15.0,
+      "acquirer": "七腾机器人有限公司",
+      "notes": "收购方在协议受让公司29.99%股份后，为进一步增强持股比例和控制权稳定性而发起的15%股份部分要约。",
+      "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-04-27/1225184703.PDF",
+      "discovered_at": "2026-04-27T23:51:20",
+      "ai_validated": true,
+      "status": "active"
+    },
+    {
+      "announcement_id": "cninfo_2026-04-26_001331_1225184700",
+      "stock_code": "001331",
+      "stock_name": "胜通能源",
+      "offer_price": 13.28,
+      "offer_start": "2026-04-28",
+      "offer_end": "2026-05-27",
+      "type": "partial",
+      "condition": "none",
+      "min_accept_ratio": 0,
+      "partial_pct": 15,
+      "acquirer": "七腾机器人有限公司",
+      "notes": "七腾机器人及其一致行动人在协议受让29.99%股份后，通过部分要约进一步增持15%股份以巩固控制权。",
+      "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-04-27/1225184700.PDF",
+      "discovered_at": "2026-04-27T23:51:40",
+      "ai_validated": true,
+      "status": "active"
     }
   ],
-  "last_search_time": "2026-04-11T15:41:10"
+  "last_search_time": "2026-04-27T23:51:40"
 }
