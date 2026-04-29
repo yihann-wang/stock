@@ -92,7 +92,61 @@
       "discovered_at": "2026-04-27T23:51:40",
       "ai_validated": true,
       "status": "active"
+    },
+    {
+      "announcement_id": "cninfo_2026-04-28_002969_1225228155",
+      "stock_code": "002969",
+      "stock_name": "嘉美包装",
+      "offer_price": 4.45,
+      "offer_start": "2026-04-30",
+      "offer_end": "2026-05-29",
+      "type": "partial",
+      "condition": "none",
+      "min_accept_ratio": 0,
+      "partial_pct": 21.26,
+      "acquirer": "苏州逐越鸿智科技发展合伙企业（有限合伙）",
+      "notes": "收购人通过协议转让受让股份后，为进一步巩固控制权而发出的部分要约收购。",
+      "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-04-29/1225228155.PDF",
+      "discovered_at": "2026-04-29T23:52:19",
+      "ai_validated": true,
+      "status": "active"
+    },
+    {
+      "announcement_id": "cninfo_2026-04-28_002969_1225228156",
+      "stock_code": "002969",
+      "stock_name": "嘉美包装",
+      "offer_price": 4.45,
+      "offer_start": "2026-04-30",
+      "offer_end": "2026-05-29",
+      "type": "partial",
+      "condition": "none",
+      "min_accept_ratio": 0,
+      "partial_pct": 21.26,
+      "acquirer": "苏州逐越鸿智科技发展合伙企业（有限合伙）",
+      "notes": "收购人通过协议转让获得25.42%股份后，发起部分要约以进一步增持并巩固对上市公司的控制权。",
+      "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-04-29/1225228156.PDF",
+      "discovered_at": "2026-04-29T23:52:33",
+      "ai_validated": true,
+      "status": "active"
+    },
+    {
+      "announcement_id": "cninfo_2026-04-28_002969_1225228158",
+      "stock_code": "002969",
+      "stock_name": "嘉美包装",
+      "offer_price": 4.45,
+      "offer_start": "2026-04-30",
+      "offer_end": "2026-05-29",
+      "type": "partial",
+      "condition": "none",
+      "min_accept_ratio": 0,
+      "partial_pct": 25.0,
+      "acquirer": "苏州逐越鸿智科技发展合伙企业（有限合伙）",
+      "notes": "收购人通过协议转让获得公司控制权后，为进一步增持及巩固控制权发起的自愿部分要约收购。",
+      "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-04-29/1225228158.PDF",
+      "discovered_at": "2026-04-29T23:52:46",
+      "ai_validated": true,
+      "status": "active"
     }
   ],
-  "last_search_time": "2026-04-27T23:51:40"
+  "last_search_time": "2026-04-29T23:52:46"
 }
