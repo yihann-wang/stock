@@ -1,0 +1,26 @@
+{
+  "mergers": [
+    {
+      "announcement_id": "cninfo_2026-05-05_603213_1225277450",
+      "acquirer_code": null,
+      "acquirer_name": "浙江沪杭甬高速公路股份有限公司",
+      "target_code": "603213",
+      "target_name": "浙江镇洋发展股份有限公司",
+      "exchange_ratio": null,
+      "record_date": null,
+      "expected_date": null,
+      "cash_option": null,
+      "cash_price": null,
+      "notes": "浙江沪杭甬拟通过发行A股股票方式换股吸收合并其控股子公司镇洋发展，目前处于延期回复问询函阶段。",
+      "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-05-06/1225277450.PDF",
+      "discovered_at": "2026-05-06T23:45:50",
+      "ai_validated": false,
+      "validation_errors": [
+        "合并方代码无效",
+        "换股比例缺失或无效"
+      ],
+      "status": "pending_review"
+    }
+  ],
+  "updated_at": "2026-05-06T23:45:50"
+}
