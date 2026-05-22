@@ -32,9 +32,7 @@ from .merger_strategy import calculate_merger_arbitrage
 from .notifier import (
     notify_announcement_found,
     notify_error,
-    notify_new_merger_unvalidated,
     notify_new_merger_validated,
-    notify_new_offer_unvalidated,
     notify_new_offer_validated,
 )
 from .price import get_realtime_price, is_trading_day
@@ -145,16 +143,14 @@ def _process_one_offer(ann: dict):
     logger.info(f"下载 PDF: {pdf_url}")
     pdf_text = download_and_extract_text(pdf_url)
     if not pdf_text:
-        logger.warning("PDF 提取文本失败，发送人工确认通知")
-        notify_new_offer_unvalidated(ann_info, None, ["PDF 下载或解析失败"])
+        logger.warning(f"PDF 提取文本失败，跳过（不推送）: {pdf_url}")
         return
 
     # 3b. AI 提取要约信息
     logger.info("调用 AI 提取要约信息...")
     offer_info = extract_offer_info(pdf_text)
     if not offer_info:
-        logger.warning("AI 提取失败，发送人工确认通知")
-        notify_new_offer_unvalidated(ann_info, None, ["AI 提取失败"])
+        logger.warning("AI 提取失败，跳过（不推送）")
         return
 
     # 用公告中的股票代码和名称补充
@@ -216,7 +212,7 @@ def _process_one_offer(ann: dict):
         add_offer(offer_record)
         notify_new_offer_validated(ann_info, offer_info, arb_info)
     else:
-        logger.warning(f"AI 校验未通过: {errors}")
+        logger.warning(f"AI 校验未通过，跳过推送（仅保存去重）: {errors}")
         offer_record = {
             "announcement_id": ann_id,
             "stock_code": offer_info.get("stock_code", ann.get("secCode", "")),
@@ -237,7 +233,6 @@ def _process_one_offer(ann: dict):
             "status": "pending_review",
         }
         add_offer(offer_record)
-        notify_new_offer_unvalidated(ann_info, offer_info, errors)
 
     logger.info("=== 公告发现流程结束 ===")
 
@@ -321,13 +316,13 @@ def _process_merger_announcement(ann: dict, ann_id: str, pdf_url: str, pub_date:
     logger.info(f"  下载PDF: {pdf_url}")
     pdf_text = download_and_extract_text(pdf_url)
     if not pdf_text:
-        notify_new_merger_unvalidated(ann_info, None, ["PDF下载或解析失败"])
+        logger.warning(f"  PDF下载或解析失败，跳过（不推送）: {pdf_url}")
         return
 
     logger.info(f"  调用AI提取吸收合并信息...")
     merger_info = extract_merger_info(pdf_text)
     if not merger_info:
-        notify_new_merger_unvalidated(ann_info, None, ["AI提取失败"])
+        logger.warning(f"  AI提取失败，跳过（不推送）")
         return
 
     # not_applicable = 非上市公司间合并，跳过
@@ -381,12 +376,11 @@ def _process_merger_announcement(ann: dict, ann_id: str, pdf_url: str, pub_date:
 
         notify_new_merger_validated(ann_info, merger_info, arb)
     else:
-        logger.warning(f"  AI校验未通过: {errors}")
+        logger.warning(f"  AI校验未通过，跳过推送（仅保存去重）: {errors}")
         merger_record["ai_validated"] = False
         merger_record["validation_errors"] = errors
         merger_record["status"] = "pending_review"
         add_merger(merger_record)
-        notify_new_merger_unvalidated(ann_info, merger_info, errors)
 
 
 if __name__ == "__main__":
