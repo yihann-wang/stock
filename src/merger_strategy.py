@@ -38,19 +38,21 @@ class MergerSignal:
 
 def calculate_merger_arbitrage(merger: dict) -> MergerArbitrageResult | None:
     """计算单个吸收合并的套利指标"""
-    target_code = merger.get("target_code", "")
-    acquirer_code = merger.get("acquirer_code", "")
-    ratio = merger.get("exchange_ratio", 0)
-    expected_date = merger.get("expected_date", "")
+    target_code = merger.get("target_code") or ""
+    acquirer_code = merger.get("acquirer_code") or ""
+    ratio = merger.get("exchange_ratio") or 0
+    expected_date = merger.get("expected_date") or ""
 
-    if not target_code or not acquirer_code or ratio <= 0:
+    if not target_code or not acquirer_code or not ratio or ratio <= 0:
+        return None
+    if not expected_date:
         return None
 
     # 计算剩余天数
     try:
         exp_date = datetime.strptime(expected_date, "%Y-%m-%d").date()
         days_left = (exp_date - datetime.now().date()).days
-    except ValueError:
+    except (ValueError, TypeError):
         return None
 
     if days_left <= 0:

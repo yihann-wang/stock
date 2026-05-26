@@ -35,8 +35,11 @@
       "notes": "浙江沪杭甬通过发行A股换股吸收合并同受交通集团控制的镇洋发展，镇洋发展将退市注销，浙江沪杭甬实现A+H双平台上市。",
       "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-05-23/1225325490.PDF",
       "discovered_at": "2026-05-24T23:57:06",
-      "ai_validated": true,
-      "status": "active"
+      "ai_validated": false,
+      "status": "pending_review",
+      "validation_errors": [
+        "预计实施日期缺失"
+      ]
     },
     {
       "announcement_id": "cninfo_2026-05-22_603213_1225325449",
@@ -52,8 +55,11 @@
       "notes": "浙江沪杭甬以发行A股方式换股吸收合并同一控制下的镇洋发展，实现A+H双融资平台并整合氯碱及氢能业务。",
       "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-05-23/1225325449.PDF",
       "discovered_at": "2026-05-24T23:57:23",
-      "ai_validated": true,
-      "status": "active"
+      "ai_validated": false,
+      "status": "pending_review",
+      "validation_errors": [
+        "预计实施日期缺失"
+      ]
     },
     {
       "announcement_id": "cninfo_2026-05-22_603213_1225325463",
@@ -69,8 +75,11 @@
       "notes": "浙江沪杭甬通过换股方式吸收合并镇洋发展，实现A股上市并整合控股股东交通集团旗下资产",
       "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-05-23/1225325463.PDF",
       "discovered_at": "2026-05-24T23:57:41",
-      "ai_validated": true,
-      "status": "active"
+      "ai_validated": false,
+      "status": "pending_review",
+      "validation_errors": [
+        "预计实施日期缺失"
+      ]
     },
     {
       "announcement_id": "cninfo_2026-05-22_603213_1225325473",
@@ -86,8 +95,11 @@
       "notes": "浙江沪杭甬通过换股吸收合并同受交通集团控制的镇洋发展，实现A+H整体上市并整合资产。",
       "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-05-23/1225325473.PDF",
       "discovered_at": "2026-05-24T23:57:55",
-      "ai_validated": true,
-      "status": "active"
+      "ai_validated": false,
+      "status": "pending_review",
+      "validation_errors": [
+        "预计实施日期缺失"
+      ]
     },
     {
       "announcement_id": "cninfo_2026-05-22_603213_1225325478",
@@ -144,8 +156,11 @@
       "notes": "浙江沪杭甬(H股00576)拟通过发行A股换股吸收合并A股上市公司镇洋发展,实现A股上市,换股比例1:1.08",
       "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-05-21/1225319954.PDF",
       "discovered_at": "2026-05-24T23:58:34",
-      "ai_validated": true,
-      "status": "active"
+      "ai_validated": false,
+      "status": "pending_review",
+      "validation_errors": [
+        "预计实施日期缺失"
+      ]
     },
     {
       "announcement_id": "cninfo_2026-05-20_603213_1225319986",
@@ -282,8 +297,11 @@
       "notes": "浙江沪杭甬H股回A股并换股吸收合并同一控制下的镇洋发展，整合浙江省交通集团旗下上市平台。",
       "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-05-21/1225320033.PDF",
       "discovered_at": "2026-05-25T00:00:23",
-      "ai_validated": true,
-      "status": "active"
+      "ai_validated": false,
+      "status": "pending_review",
+      "validation_errors": [
+        "预计实施日期缺失"
+      ]
     },
     {
       "announcement_id": "cninfo_2026-05-20_603213_1225319932",
@@ -360,8 +378,11 @@
       "notes": "浙江沪杭甬以A股发行价13.50元/股换股吸收合并镇洋发展,镇洋发展换股价14.58元/股,异议股东现金选择权价格12.96元/股(除权后)。",
       "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-05-21/1225320008.PDF",
       "discovered_at": "2026-05-25T00:02:10",
-      "ai_validated": true,
-      "status": "active"
+      "ai_validated": false,
+      "status": "pending_review",
+      "validation_errors": [
+        "预计实施日期缺失"
+      ]
     },
     {
       "announcement_id": "cninfo_2026-05-20_603213_1225319967",
@@ -377,8 +398,11 @@
       "notes": "浙江沪杭甬通过发行A股换股吸收合并同受交通集团控制的镇洋发展，实现A+H双平台整合并使浙江沪杭甬A股回归上交所主板上市。",
       "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-05-21/1225319967.PDF",
       "discovered_at": "2026-05-25T00:02:27",
-      "ai_validated": true,
-      "status": "active"
+      "ai_validated": false,
+      "status": "pending_review",
+      "validation_errors": [
+        "预计实施日期缺失"
+      ]
     },
     {
       "announcement_id": "cninfo_2026-05-20_603213_1225320027",
@@ -414,8 +438,11 @@
       "notes": "中金公司通过换股方式同时吸收合并东兴证券(换股比例1:0.4376)和信达证券(换股比例1:0.5210)，三方实际控制人均为中央汇金，旨在打造一流投资银行。",
       "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-05-19/1225314010.PDF",
       "discovered_at": "2026-05-25T00:03:05",
-      "ai_validated": true,
-      "status": "active"
+      "ai_validated": false,
+      "status": "pending_review",
+      "validation_errors": [
+        "预计实施日期缺失"
+      ]
     },
     {
       "announcement_id": "cninfo_2026-05-18_601198_1225314221",
@@ -451,8 +478,11 @@
       "notes": "中金公司换股吸收合并东兴证券、信达证券,旨在打造一流投资银行,推动证券行业头部机构做强做优",
       "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-05-19/1225314224.PDF",
       "discovered_at": "2026-05-25T00:03:29",
-      "ai_validated": true,
-      "status": "active"
+      "ai_validated": false,
+      "status": "pending_review",
+      "validation_errors": [
+        "预计实施日期缺失"
+      ]
     },
     {
       "announcement_id": "cninfo_2026-05-18_601059_1225314596",
@@ -488,8 +518,11 @@
       "notes": "中金公司换股吸收合并东兴证券、信达证券，旨在打造一流投资银行，推动证券行业资源整合与高质量发展",
       "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-05-19/1225314606.PDF",
       "discovered_at": "2026-05-25T00:03:52",
-      "ai_validated": true,
-      "status": "active"
+      "ai_validated": false,
+      "status": "pending_review",
+      "validation_errors": [
+        "预计实施日期缺失"
+      ]
     },
     {
       "announcement_id": "cninfo_2026-05-18_601198_1225314220",
@@ -505,8 +538,11 @@
       "notes": "中金公司换股吸收合并东兴证券、信达证券，旨在打造具有国际竞争力的一流投资银行，三方实际控制人均为中央汇金。",
       "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-05-19/1225314220.PDF",
       "discovered_at": "2026-05-25T00:04:19",
-      "ai_validated": true,
-      "status": "active"
+      "ai_validated": false,
+      "status": "pending_review",
+      "validation_errors": [
+        "预计实施日期缺失"
+      ]
     },
     {
       "announcement_id": "cninfo_2026-05-18_601198_1225314258",
@@ -522,8 +558,11 @@
       "notes": "中金公司换股吸收合并东兴证券(601198,换股比例1:0.4376)和信达证券(601059,换股比例1:0.5210),旨在打造具有国际竞争力的一流投资银行,合并后东兴证券、信达证券终止上市并注销法人资格。",
       "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-05-19/1225314258.PDF",
       "discovered_at": "2026-05-25T00:04:39",
-      "ai_validated": true,
-      "status": "active"
+      "ai_validated": false,
+      "status": "pending_review",
+      "validation_errors": [
+        "预计实施日期缺失"
+      ]
     },
     {
       "announcement_id": "cninfo_2026-05-18_601995_1225314020",
@@ -559,8 +598,11 @@
       "notes": "中金公司换股吸收合并东兴证券、信达证券,推进证券行业高质量发展并打造具有国际竞争力的一流投资银行",
       "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-05-19/1225314642.PDF",
       "discovered_at": "2026-05-25T00:05:03",
-      "ai_validated": true,
-      "status": "active"
+      "ai_validated": false,
+      "status": "pending_review",
+      "validation_errors": [
+        "预计实施日期缺失"
+      ]
     },
     {
       "announcement_id": "cninfo_2026-05-18_601059_1225314591",
@@ -596,8 +638,11 @@
       "notes": "中金公司通过向东兴证券、信达证券全体A股换股股东发行A股股票的方式换股吸收合并东兴证券和信达证券，东兴证券每1股换0.4376股中金公司A股，信达证券每1股换0.5210股中金公司A股",
       "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-05-19/1225314592.PDF",
       "discovered_at": "2026-05-25T00:05:31",
-      "ai_validated": true,
-      "status": "active"
+      "ai_validated": false,
+      "status": "pending_review",
+      "validation_errors": [
+        "预计实施日期缺失"
+      ]
     },
     {
       "announcement_id": "cninfo_2026-05-18_601995_1225314000",
@@ -653,8 +698,11 @@
       "notes": "中金公司(601995)同时换股吸收合并东兴证券(601198,换股比例0.4376)和信达证券(601059,换股比例0.5210),三方均为中央汇金控制下的A股上市券商,旨在整合证券业务、打造一流投行。",
       "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-05-19/1225314251.PDF",
       "discovered_at": "2026-05-25T00:06:11",
-      "ai_validated": true,
-      "status": "active"
+      "ai_validated": false,
+      "status": "pending_review",
+      "validation_errors": [
+        "预计实施日期缺失"
+      ]
     },
     {
       "announcement_id": "cninfo_2026-05-18_601995_1225314015",
@@ -670,8 +718,11 @@
       "notes": "中金公司同时换股吸收合并东兴证券(601198,换股比例0.4376,现金选择权13.04元)和信达证券(601059,换股比例0.5210,现金选择权17.75元),旨在打造具有国际竞争力的一流投资银行",
       "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-05-19/1225314015.PDF",
       "discovered_at": "2026-05-25T00:06:30",
-      "ai_validated": true,
-      "status": "active"
+      "ai_validated": false,
+      "status": "pending_review",
+      "validation_errors": [
+        "预计实施日期缺失"
+      ]
     },
     {
       "announcement_id": "cninfo_2026-05-18_601995_1225314022",
@@ -687,8 +738,11 @@
       "notes": "中金公司通过换股方式吸收合并东兴证券和信达证券,旨在打造具有国际竞争力的一流投资银行",
       "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-05-19/1225314022.PDF",
       "discovered_at": "2026-05-25T00:06:47",
-      "ai_validated": true,
-      "status": "active"
+      "ai_validated": false,
+      "status": "pending_review",
+      "validation_errors": [
+        "预计实施日期缺失"
+      ]
     },
     {
       "announcement_id": "cninfo_2026-05-18_601995_1225314023",
@@ -704,8 +758,11 @@
       "notes": "中金公司换股吸收合并东兴证券、信达证券，打造一流投资银行（本条目为东兴证券部分，另有信达证券换股比例1:0.5210，现金选择权17.75元/股）",
       "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-05-19/1225314023.PDF",
       "discovered_at": "2026-05-25T00:07:02",
-      "ai_validated": true,
-      "status": "active"
+      "ai_validated": false,
+      "status": "pending_review",
+      "validation_errors": [
+        "预计实施日期缺失"
+      ]
     },
     {
       "announcement_id": "cninfo_2026-05-18_601995_1225314022",
@@ -721,8 +778,11 @@
       "notes": "中金公司通过换股方式吸收合并东兴证券和信达证券,加快建设具有国际竞争力的一流投资银行",
       "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-05-19/1225314022.PDF",
       "discovered_at": "2026-05-25T00:07:18",
-      "ai_validated": true,
-      "status": "active"
+      "ai_validated": false,
+      "status": "pending_review",
+      "validation_errors": [
+        "预计实施日期缺失"
+      ]
     },
     {
       "announcement_id": "cninfo_2026-05-18_601995_1225314023",
@@ -738,8 +798,11 @@
       "notes": "中金公司换股吸收合并东兴证券和信达证券，旨在加快建设具有国际竞争力的一流投资银行，支持资本市场深化改革与证券行业高质量发展。",
       "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-05-19/1225314023.PDF",
       "discovered_at": "2026-05-25T00:07:32",
-      "ai_validated": true,
-      "status": "active"
+      "ai_validated": false,
+      "status": "pending_review",
+      "validation_errors": [
+        "预计实施日期缺失"
+      ]
     },
     {
       "announcement_id": "cninfo_2026-05-18_601198_1225314240",
@@ -755,9 +818,12 @@
       "notes": "中金公司换股吸收合并东兴证券和信达证券，整合券商业务，东兴证券将终止上市并注销法人资格。",
       "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-05-19/1225314240.PDF",
       "discovered_at": "2026-05-25T00:07:47",
-      "ai_validated": true,
-      "status": "active"
+      "ai_validated": false,
+      "status": "pending_review",
+      "validation_errors": [
+        "预计实施日期缺失"
+      ]
     }
   ],
-  "updated_at": "2026-05-25T00:07:47"
+  "updated_at": "2026-05-26T14:50:09"
 }

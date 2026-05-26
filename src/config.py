@@ -84,20 +84,40 @@ def save_mergers(data: dict):
 
 
 def get_active_mergers() -> list[dict]:
-    """活跃的吸收合并（未过实施日期）"""
+    """活跃的吸收合并（未过实施日期）
+
+    过滤规则:
+      - status != active 排除
+      - expected_date 为空 排除（无法计算套利窗口）
+      - expected_date < 今天 标记 expired 并排除
+      - 同一 target_code 多条公告只保留 discovered_at 最新一条
+        (公告会多次更新, 旧版本的换股比例可能已被新公告取代)
+    """
     data = load_mergers()
     today = datetime.now().strftime("%Y-%m-%d")
-    active = []
+    candidates = []
     for m in data.get("mergers", []):
         if m.get("status") != "active":
             continue
         exp = m.get("expected_date")
-        if exp and exp < today:
+        if not exp:
+            continue
+        if exp < today:
             m["status"] = "expired"
             continue
-        active.append(m)
+        candidates.append(m)
     save_mergers(data)
-    return active
+
+    # 同一 target_code 保留 discovered_at 最新一条
+    latest_by_target: dict[str, dict] = {}
+    for m in candidates:
+        tcode = m.get("target_code") or ""
+        if not tcode:
+            continue
+        prev = latest_by_target.get(tcode)
+        if prev is None or (m.get("discovered_at", "") > prev.get("discovered_at", "")):
+            latest_by_target[tcode] = m
+    return list(latest_by_target.values())
 
 
 def get_known_merger_ids() -> set[str]:

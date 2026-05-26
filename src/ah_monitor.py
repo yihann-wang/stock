@@ -71,15 +71,8 @@ def scan_ah_premium() -> list[AHPremiumResult]:
             if attempt < 2:
                 _t.sleep(2)
     if df is None or df.empty:
-        try:
-            from .notifier import notify_error
-            notify_error(
-                stage="AH股数据获取",
-                error="akshare AH股 3次重试均失败",
-                detail=str(last_err) if last_err else "返回空数据",
-            )
-        except Exception:
-            pass
+        # 上游 push2.eastmoney 502/504 间歇性故障常见, AH 为辅助监控, 不再推钉钉
+        logger.warning(f"AH股数据获取失败(上游间歇性故障),本次跳过: {last_err}")
         return []
 
     logger.info(f"获取到 {len(df)} 只AH股数据")

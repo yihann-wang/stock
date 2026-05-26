@@ -178,12 +178,14 @@ def validate_merger(merger: dict) -> tuple[bool, list[str]]:
         errors.append("换股比例缺失或无效")
 
     exp_date = merger.get("expected_date")
-    if exp_date:
+    if not exp_date:
+        errors.append("预计实施日期缺失")
+    else:
         try:
             d = datetime.strptime(exp_date, "%Y-%m-%d").date()
             if d < datetime.now().date():
                 errors.append("预计实施日期已过")
-        except ValueError:
+        except (ValueError, TypeError):
             errors.append("预计实施日期格式无效")
 
     return (len(errors) == 0, errors)
