@@ -1,0 +1,27 @@
+name: AH Premium Monitor
+
+on:
+  schedule:
+    # 每周二 9:35 北京时间 = 周二 UTC 01:35
+    # 避开 push2.eastmoney 早盘前 (6:00-9:00 北京) 的 502/504 高发窗口
+    # 改在开盘 5 分钟后, push2 此时最稳定
+    - cron: '35 1 * * 2'
+  workflow_dispatch:
+
+jobs:
+  ah-monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - run: pip install -r requirements.txt
+
+      - run: python -m src.ah_main
+        env:
+          DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
+          DINGTALK_SECRET: ${{ secrets.DINGTALK_SECRET }}

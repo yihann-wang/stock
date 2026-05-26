@@ -5,7 +5,6 @@ import traceback
 
 from datetime import datetime, timedelta, timezone
 
-from .ah_monitor import scan_ah_premium
 from .cb_ipo import scan_cb_ipo
 from .cb_strategy import scan_cb_arbitrage, scan_cb_maturity_play, scan_cb_putback
 from .config import (
@@ -15,7 +14,6 @@ from .config import (
 )
 from .merger_strategy import evaluate_merger_signals
 from .notifier import (
-    notify_ah_premium,
     notify_cb_arbitrage,
     notify_cb_ipo,
     notify_cb_maturity_play,
@@ -165,14 +163,8 @@ def run():
             logger.info("无可打新可转债")
     _safe_run("可转债打新", _cb_ipo)
 
-    # ===== AH股溢价 =====
-    def _ah_premium():
-        logger.info("--- AH股溢价 ---")
-        ah_results = scan_ah_premium()
-        if ah_results:
-            logger.info(f"发现 {len(ah_results)} 只AH股极端溢价")
-            notify_ah_premium(ah_results)
-    _safe_run("AH股溢价", _ah_premium)
+    # AH 股溢价已拆到独立 workflow (ah_monitor.yml), 周二 9:35 北京时间运行
+    # 避开早盘前 push2.eastmoney 的 502/504 高发窗口
 
     logger.info("=== 价差监控流程结束 ===")
 
