@@ -57,22 +57,27 @@ def scan_ah_premium() -> list[AHPremiumResult]:
         logger.warning("akshare 未安装，跳过AH股溢价监控")
         return []
 
+    # push2.eastmoney 早盘前 (6-9点) 易 502/504, 用 6 次指数退避覆盖故障窗口
+    # 累计等待 ~2 分钟, 通常能熬过短时故障
     import time as _t
+    backoffs = [2, 5, 10, 20, 40, 60]
     df = None
     last_err = None
-    for attempt in range(3):
+    for attempt, wait in enumerate(backoffs):
         try:
             df = ak.stock_zh_ah_spot_em()
             if df is not None and not df.empty:
+                if attempt > 0:
+                    logger.info(f"AH股数据在第 {attempt+1} 次尝试成功")
                 break
         except Exception as e:
             last_err = e
-            logger.warning(f"AH股数据获取失败 (尝试 {attempt+1}/3): {e}")
-            if attempt < 2:
-                _t.sleep(2)
+            logger.warning(f"AH股数据获取失败 (尝试 {attempt+1}/{len(backoffs)}): {e}")
+            if attempt < len(backoffs) - 1:
+                _t.sleep(wait)
     if df is None or df.empty:
-        # 上游 push2.eastmoney 502/504 间歇性故障常见, AH 为辅助监控, 不再推钉钉
-        logger.warning(f"AH股数据获取失败(上游间歇性故障),本次跳过: {last_err}")
+        # 重试 6 次仍失败, 上游持续故障, 静默跳过 (AH 为辅助监控)
+        logger.warning(f"AH股数据 {len(backoffs)} 次重试均失败,本次跳过: {last_err}")
         return []
 
     logger.info(f"获取到 {len(df)} 只AH股数据")
