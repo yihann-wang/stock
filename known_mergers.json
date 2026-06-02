@@ -887,7 +887,70 @@
         "预计实施日期缺失"
       ],
       "status": "pending_review"
+    },
+    {
+      "announcement_id": "cninfo_2026-06-01_603213_1225343270",
+      "acquirer_code": null,
+      "acquirer_name": "浙江沪杭甬高速公路股份有限公司",
+      "target_code": "603213",
+      "target_name": "浙江镇洋发展股份有限公司",
+      "exchange_ratio": 1.0931,
+      "record_date": null,
+      "expected_date": null,
+      "cash_option": true,
+      "cash_price": 12.96,
+      "notes": "浙江沪杭甬拟以发行A股方式换股吸收合并镇洋发展，交易完成后镇洋发展终止上市并注销，浙江沪杭甬作为存续公司承继其全部资产、负债、业务和人员。",
+      "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-06-02/1225343270.PDF",
+      "discovered_at": "2026-06-02T23:32:13",
+      "ai_validated": false,
+      "validation_errors": [
+        "合并方代码无效",
+        "预计实施日期缺失"
+      ],
+      "status": "pending_review"
+    },
+    {
+      "announcement_id": "cninfo_2026-06-01_603213_1225343284",
+      "acquirer_code": null,
+      "acquirer_name": "浙江沪杭甬高速公路股份有限公司",
+      "target_code": "603213",
+      "target_name": "浙江镇洋发展股份有限公司",
+      "exchange_ratio": 1.0931,
+      "record_date": null,
+      "expected_date": null,
+      "cash_option": true,
+      "cash_price": null,
+      "notes": "浙江沪杭甬拟通过向镇洋发展全体A股换股股东发行A股股票的方式换股吸收合并镇洋发展，交易构成关联交易。",
+      "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-06-02/1225343284.PDF",
+      "discovered_at": "2026-06-02T23:32:32",
+      "ai_validated": false,
+      "validation_errors": [
+        "合并方代码无效",
+        "预计实施日期缺失"
+      ],
+      "status": "pending_review"
+    },
+    {
+      "announcement_id": "cninfo_2026-06-01_603213_1225343272",
+      "acquirer_code": null,
+      "acquirer_name": "浙江沪杭甬高速公路股份有限公司",
+      "target_code": "603213",
+      "target_name": "浙江镇洋发展股份有限公司",
+      "exchange_ratio": 1.0931,
+      "record_date": null,
+      "expected_date": null,
+      "cash_option": true,
+      "cash_price": 12.96,
+      "notes": "浙江沪杭甬拟通过发行A股换股吸收合并同受浙江省交通投资集团控制的镇洋发展，交易完成后镇洋发展终止上市并注销，浙江沪杭甬作为存续公司承继其全部资产负债等权利义务。",
+      "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-06-02/1225343272.PDF",
+      "discovered_at": "2026-06-02T23:33:07",
+      "ai_validated": false,
+      "validation_errors": [
+        "合并方代码无效",
+        "预计实施日期缺失"
+      ],
+      "status": "pending_review"
     }
   ],
-  "updated_at": "2026-06-02T00:12:43"
+  "updated_at": "2026-06-02T23:33:07"
 }
