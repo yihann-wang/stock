@@ -950,7 +950,29 @@
         "预计实施日期缺失"
       ],
       "status": "pending_review"
+    },
+    {
+      "announcement_id": "cninfo_2026-06-01_603213_1225343289",
+      "acquirer_code": null,
+      "acquirer_name": "浙江沪杭甬高速公路股份有限公司",
+      "target_code": "603213",
+      "target_name": "浙江镇洋发展股份有限公司",
+      "exchange_ratio": null,
+      "record_date": null,
+      "expected_date": null,
+      "cash_option": true,
+      "cash_price": null,
+      "notes": "浙江沪杭甬拟通过发行A股股票换股吸收合并镇洋发展，本次交易已获上交所并购重组委审核通过并形成注册稿。",
+      "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-06-02/1225343289.PDF",
+      "discovered_at": "2026-06-03T23:31:48",
+      "ai_validated": false,
+      "validation_errors": [
+        "合并方代码无效",
+        "换股比例缺失或无效",
+        "预计实施日期缺失"
+      ],
+      "status": "pending_review"
     }
   ],
-  "updated_at": "2026-06-02T23:33:07"
+  "updated_at": "2026-06-03T23:31:48"
 }
