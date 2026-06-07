@@ -972,7 +972,144 @@
         "预计实施日期缺失"
       ],
       "status": "pending_review"
+    },
+    {
+      "announcement_id": "cninfo_2026-06-05_601059_1225355051",
+      "acquirer_code": "601995",
+      "acquirer_name": "中国国际金融股份有限公司",
+      "target_code": null,
+      "target_name": "东兴证券股份有限公司、信达证券股份有限公司",
+      "exchange_ratio": null,
+      "record_date": null,
+      "expected_date": null,
+      "cash_option": null,
+      "cash_price": null,
+      "notes": "中国国际金融股份有限公司拟通过换股方式吸收合并东兴证券股份有限公司、信达证券股份有限公司，本公告为相关主体买卖股票情况的专项核查意见。",
+      "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-06-06/1225355051.PDF",
+      "discovered_at": "2026-06-07T23:22:25",
+      "ai_validated": false,
+      "validation_errors": [
+        "被合并方代码无效",
+        "换股比例缺失或无效",
+        "预计实施日期缺失"
+      ],
+      "status": "pending_review"
+    },
+    {
+      "announcement_id": "cninfo_2026-06-05_601059_1225355049",
+      "acquirer_code": "601995",
+      "acquirer_name": "中国国际金融股份有限公司",
+      "target_code": "601059",
+      "target_name": "信达证券股份有限公司",
+      "exchange_ratio": null,
+      "record_date": null,
+      "expected_date": null,
+      "cash_option": null,
+      "cash_price": null,
+      "notes": "中国国际金融股份有限公司拟以换股方式吸收合并东兴证券股份有限公司和信达证券股份有限公司，本文件为相关主体买卖股票情况专项核查意见。",
+      "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-06-06/1225355049.PDF",
+      "discovered_at": "2026-06-07T23:22:40",
+      "ai_validated": false,
+      "validation_errors": [
+        "换股比例缺失或无效",
+        "预计实施日期缺失"
+      ],
+      "status": "pending_review"
+    },
+    {
+      "announcement_id": "cninfo_2026-06-05_601995_1225354686",
+      "acquirer_code": "601995",
+      "acquirer_name": "中国国际金融股份有限公司",
+      "target_code": null,
+      "target_name": "东兴证券股份有限公司、信达证券股份有限公司",
+      "exchange_ratio": null,
+      "record_date": null,
+      "expected_date": null,
+      "cash_option": null,
+      "cash_price": null,
+      "notes": "中国国际金融股份有限公司拟通过换股方式吸收合并东兴证券股份有限公司和信达证券股份有限公司，本公告为相关主体买卖股票情况的专项核查意见。",
+      "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-06-06/1225354686.PDF",
+      "discovered_at": "2026-06-07T23:22:57",
+      "ai_validated": false,
+      "validation_errors": [
+        "被合并方代码无效",
+        "换股比例缺失或无效",
+        "预计实施日期缺失"
+      ],
+      "status": "pending_review"
+    },
+    {
+      "announcement_id": "cninfo_2026-06-05_601995_1225354689",
+      "acquirer_code": "601995",
+      "acquirer_name": "中国国际金融股份有限公司",
+      "target_code": [
+        "601198",
+        "601059"
+      ],
+      "target_name": [
+        "东兴证券股份有限公司",
+        "信达证券股份有限公司"
+      ],
+      "exchange_ratio": null,
+      "record_date": null,
+      "expected_date": null,
+      "cash_option": null,
+      "cash_price": null,
+      "notes": "中国国际金融股份有限公司拟通过换股方式吸收合并东兴证券股份有限公司和信达证券股份有限公司。",
+      "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-06-06/1225354689.PDF",
+      "discovered_at": "2026-06-07T23:23:12",
+      "ai_validated": false,
+      "validation_errors": [
+        "被合并方代码无效",
+        "换股比例缺失或无效",
+        "预计实施日期缺失"
+      ],
+      "status": "pending_review"
+    },
+    {
+      "announcement_id": "cninfo_2026-06-05_601198_1225354865",
+      "acquirer_code": "601995",
+      "acquirer_name": "中国国际金融股份有限公司",
+      "target_code": "601198,601059",
+      "target_name": "东兴证券股份有限公司、信达证券股份有限公司",
+      "exchange_ratio": null,
+      "record_date": null,
+      "expected_date": null,
+      "cash_option": null,
+      "cash_price": null,
+      "notes": "中国国际金融股份有限公司拟通过换股方式吸收合并东兴证券股份有限公司和信达证券股份有限公司，本公告为相关主体买卖股票情况的专项核查意见。",
+      "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-06-06/1225354865.PDF",
+      "discovered_at": "2026-06-07T23:23:27",
+      "ai_validated": false,
+      "validation_errors": [
+        "被合并方代码无效",
+        "换股比例缺失或无效",
+        "预计实施日期缺失"
+      ],
+      "status": "pending_review"
+    },
+    {
+      "announcement_id": "cninfo_2026-06-05_601198_1225354870",
+      "acquirer_code": "601995",
+      "acquirer_name": "中国国际金融股份有限公司",
+      "target_code": null,
+      "target_name": "东兴证券股份有限公司、信达证券股份有限公司",
+      "exchange_ratio": null,
+      "record_date": null,
+      "expected_date": null,
+      "cash_option": null,
+      "cash_price": null,
+      "notes": "中国国际金融股份有限公司拟通过换股方式吸收合并东兴证券股份有限公司和信达证券股份有限公司，本公告为相关主体买卖股票情况专项核查意见。",
+      "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-06-06/1225354870.PDF",
+      "discovered_at": "2026-06-07T23:23:42",
+      "ai_validated": false,
+      "validation_errors": [
+        "被合并方代码无效",
+        "换股比例缺失或无效",
+        "预计实施日期缺失"
+      ],
+      "status": "pending_review"
     }
   ],
-  "updated_at": "2026-06-03T23:31:48"
+  "updated_at": "2026-06-07T23:23:42"
 }
