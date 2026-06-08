@@ -1109,7 +1109,29 @@
         "预计实施日期缺失"
       ],
       "status": "pending_review"
+    },
+    {
+      "announcement_id": "cninfo_2026-06-08_03908_1225359161",
+      "acquirer_code": "601995",
+      "acquirer_name": "中国国际金融股份有限公司",
+      "target_code": null,
+      "target_name": "东兴证券股份有限公司、信达证券股份有限公司",
+      "exchange_ratio": null,
+      "record_date": null,
+      "expected_date": null,
+      "cash_option": null,
+      "cash_price": null,
+      "notes": "中金公司拟向东兴证券、信达证券全体A股换股股东发行A股股票，换股吸收合并东兴证券和信达证券，现通知债权人申报债权。",
+      "pdf_url": "http://static.cninfo.com.cn/finalpage/2026-06-08/1225359161.PDF",
+      "discovered_at": "2026-06-08T23:25:51",
+      "ai_validated": false,
+      "validation_errors": [
+        "被合并方代码无效",
+        "换股比例缺失或无效",
+        "预计实施日期缺失"
+      ],
+      "status": "pending_review"
     }
   ],
-  "updated_at": "2026-06-07T23:23:42"
+  "updated_at": "2026-06-08T23:25:51"
 }
