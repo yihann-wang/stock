@@ -1,4 +1,4 @@
-"""钉钉通知模块 - 签名鉴权 + 四种 Markdown 消息模板"""
+"""DingTalk transport and the combined weekly report renderer."""
 
 import base64
 import hashlib
@@ -7,617 +7,202 @@ import logging
 import time
 import urllib.parse
 
-import requests
+from .http_client import DirectHttpClient
+from .models import WeeklyScanReport
+from .settings import AppSettings, DingTalkSettings, get_required_env
 
-from .config import get_env, load_config
 
 logger = logging.getLogger(__name__)
 
-
-def _sign_url(webhook: str, secret: str) -> str:
-    """生成带签名的钉钉 Webhook URL"""
-    timestamp = str(round(time.time() * 1000))
-    string_to_sign = f"{timestamp}\n{secret}"
-    hmac_code = hmac.new(
-        secret.encode("utf-8"),
-        string_to_sign.encode("utf-8"),
-        digestmod=hashlib.sha256,
-    ).digest()
-    sign = urllib.parse.quote_plus(base64.b64encode(hmac_code))
-    return f"{webhook}&timestamp={timestamp}&sign={sign}"
-
-
-def send_dingtalk(title: str, markdown_text: str) -> bool:
-    """发送钉钉 Markdown 消息"""
-    cfg = load_config().get("notification", {}).get("dingtalk", {})
-    if not cfg.get("enabled", True):
-        logger.info("钉钉通知已禁用")
-        return False
-
-    webhook = get_env("DINGTALK_WEBHOOK")
-    secret = get_env("DINGTALK_SECRET")
-    url = _sign_url(webhook, secret)
-
-    payload = {
-        "msgtype": "markdown",
-        "markdown": {
-            "title": title,
-            "text": markdown_text,
-        },
-    }
-
-    try:
-        resp = requests.post(url, json=payload, timeout=10)
-        result = resp.json()
-        if result.get("errcode") == 0:
-            logger.info(f"钉钉消息发送成功: {title}")
-            return True
-        else:
-            logger.error(f"钉钉消息发送失败: {result}")
-            return False
-    except Exception as e:
-        logger.error(f"钉钉消息发送异常: {e}")
-        return False
+REASON_LABELS = {
+    "expired": "已到期",
+    "price_not_below_limit": "价格不低于100元",
+    "maturity_too_far": "到期超过一年半",
+    "missing_bond_price": "转债价格缺失",
+    "missing_expire_date": "到期日缺失",
+    "sector_gain_too_high": "板块四周涨幅超过5%",
+    "insufficient_excess": "正股四周超额不足8个百分点",
+    "not_stronger_every_week": "未做到四周都强于板块",
+    "missing_sector_mapping": "申万行业映射缺失",
+    "missing_sector_history": "行业历史行情缺失",
+    "missing_stock_history": "正股历史行情缺失",
+    "insufficient_history": "共同历史不足五个交易周",
+    "stale_history": "最新共同行情已过期",
+    "internal_candidate_error": "候选组装异常",
+    "strategy_disabled": "策略已禁用",
+}
 
 
-# ==================== 消息模板 ====================
+class NotificationError(RuntimeError):
+    pass
 
 
-def notify_error(stage: str, error: str, detail: str = ""):
-    """系统错误通知 - 当某个策略数据获取失败/异常时推送"""
-    detail_section = f"\n\n**详细信息**\n```\n{detail[:500]}\n```" if detail else ""
-    text = f"""### 【系统错误告警】
-
----
-
-- 出错环节: **{stage}**
-- 错误信息: {error}
-{detail_section}
-
-> 该策略本次未推送结果。其他策略不受影响。
-> 若持续出现，请检查代码或数据源。
-
----"""
-
-    try:
-        send_dingtalk(f"系统错误: {stage}", text)
-    except Exception as e:
-        logger.error(f"错误通知本身发送失败: {e}")
+def _format_pct(value: float) -> str:
+    return f"{value:+.2f}%"
 
 
-def notify_new_offer_validated(ann: dict, offer: dict, arb: dict | None):
-    """新公告发现 - AI 校验通过"""
-    offer_type_map = {"full": "全面要约", "partial": "部分要约"}
-    condition_map = {"none": "无条件", "min_accept": "有条件"}
-
-    offer_type_str = offer_type_map.get(offer.get("type", ""), offer.get("type", ""))
-    condition_str = condition_map.get(offer.get("condition", ""), offer.get("condition", ""))
-
-    # 套利测算部分
-    arb_section = ""
-    if arb:
-        arb_section = f"""
-**实时套利测算**
-
-- 当前股价: {arb['current_price']:.2f} 元
-- 价差: +{arb['spread']:.2f} 元 ({arb['spread_pct']:.1f}%)
-- 年化收益: {arb['annualized_pct']:.1f}% (剩余{arb['days_left']}天)
-- 日均成交额: {arb['daily_volume']:,.0f} 万元
-"""
-
-    text = f"""### 【新要约收购公告发现】
-
----
-
-**公告信息**
-
-- 股票: {offer.get('stock_code', '')} {offer.get('stock_name', '')}
-- 公告: {ann.get('announcementTitle', '')}
-- 发布日期: {ann.get('pub_date', '')}
-- 公告原文: [点击查看PDF]({ann.get('pdf_url', '')})
-
-**AI 提取分析**
-
-- 要约价格: {offer.get('offer_price', 'N/A')} 元
-- 要约期限: {offer.get('offer_start', 'N/A')} ~ {offer.get('offer_end', 'N/A')}
-- 要约类型: {offer_type_str} | {condition_str}
-- 收购方: {offer.get('acquirer', 'N/A')}
-- 背景: {offer.get('notes', 'N/A')}
-{arb_section}
-> AI 置信度: **高** - 所有字段校验通过，已自动加入监控
-
----"""
-
-    send_dingtalk("新要约收购公告发现", text)
-
-
-def notify_new_offer_unvalidated(ann: dict, offer: dict | None, errors: list[str]):
-    """新公告发现 - AI 校验未通过"""
-    offer_info = ""
-    if offer:
-        offer_info = f"""
-**AI 提取结果**
-
-- 要约价格: {offer.get('offer_price', '[未能提取]')} 元
-- 截止日期: {offer.get('offer_end', '[未能提取]')}
-- 要约类型: {offer.get('type', '[未能提取]')}
-"""
-
-    error_str = "、".join(errors) if errors else "AI 解析失败"
-
-    text = f"""### 【新要约收购公告 - 需人工确认】
-
----
-
-- 公告: {ann.get('announcementTitle', '')}
-- 公告原文: [点击查看PDF]({ann.get('pdf_url', '')})
-{offer_info}
-> 缺失/异常字段: {error_str}
-> 请查看 PDF 原文确认
-
----"""
-
-    send_dingtalk("新要约收购公告 - 需人工确认", text)
-
-
-def notify_spread_signal(result):
-    """日常套利信号"""
-    offer_type_map = {"full": "全面要约", "partial": "部分要约"}
-    condition_map = {"none": "无条件", "min_accept": "有条件"}
-
-    offer_type_str = offer_type_map.get(result.offer_type, result.offer_type)
-    condition_str = condition_map.get(result.condition, result.condition)
-
-    partial_info = ""
-    if result.offer_type == "partial" and result.adjusted_spread_pct is not None:
-        partial_info = (
-            f"\n- 调整后价差(按{result.partial_pct:.0f}%接纳): "
-            f"{result.adjusted_spread_pct:.1f}%"
-            f"\n- 调整后年化: {result.adjusted_annualized_pct:.1f}%"
+def _format_counts(counts: dict[str, int]) -> str:
+    if not counts:
+        return "无"
+    return "；".join(
+        f"{REASON_LABELS.get(reason, reason)} {count}"
+        for reason, count in sorted(
+            counts.items(), key=lambda item: (-item[1], item[0])
         )
-
-    text = f"""### 【要约收购套利信号】
-
----
-
-- 股票: {result.stock_code} {result.stock_name}
-- 现价: {result.current_price:.2f} | 要约价: {result.offer_price:.2f}
-- 价差: +{result.spread:.2f} 元 ({result.spread_pct:.1f}%)
-- 年化: {result.annualized_pct:.1f}%
-- 类型: {offer_type_str} | {condition_str}
-- 截止: {result.offer_end} (剩余{result.days_left}天){partial_info}
-
----"""
-
-    send_dingtalk("要约收购套利信号", text)
-
-
-def notify_deadline_warning(result):
-    """截止日提醒"""
-    text = f"""### 【要约即将截止提醒】
-
----
-
-- 股票: {result.stock_code} {result.stock_name}
-- 要约价: {result.offer_price:.2f} | 现价: {result.current_price:.2f}
-- 剩余: **{result.days_left} 天** ({result.offer_end} 截止)
-- 当前价差: {result.spread_pct:.1f}% | 年化: {result.annualized_pct:.1f}%
-- **请尽快决策是否参与!**
-
----"""
-
-    send_dingtalk("要约即将截止提醒", text)
-
-
-def notify_negative_spread(result):
-    """负价差警告"""
-    text = f"""### 【负价差警告】
-
----
-
-- 股票: {result.stock_code} {result.stock_name}
-- 现价: {result.current_price:.2f} > 要约价: {result.offer_price:.2f}
-- 价差: {result.spread:.2f} 元 ({result.spread_pct:.1f}%)
-- 截止: {result.offer_end} (剩余{result.days_left}天)
-- **当前买入无套利空间**
-
----"""
-
-    send_dingtalk("负价差警告", text)
-
-
-def notify_cb_arbitrage(results: list):
-    """可转债转股套利信号 - 合并推送所有负溢价机会"""
-    if not results:
-        return
-
-    rows = []
-    for r in results:
-        rows.append(
-            f"- **{r.bond_name}**({r.bond_code}) | "
-            f"溢价率 **{r.premium_rate:.2f}%** | "
-            f"转债价 {r.bond_price:.2f} → 转股价值 {r.convert_value:.2f} | "
-            f"每10张赚 {r.profit_per_ten:.2f}元 | "
-            f"成交额 {r.volume:.0f}万"
-        )
-    rows_text = "\n".join(rows)
-
-    text = f"""### 【可转债转股套利信号】
-
----
-
-> 发现 **{len(results)}** 只负溢价可转债
-
-{rows_text}
-
-> 操作: 买入转债 → 当日转股 → 次日卖出正股
-> 风险: 次日正股开盘价下跌(隔夜风险)
-
----"""
-
-    send_dingtalk("可转债转股套利信号", text)
-
-
-def notify_cb_no_opportunity(total: int, neg_list: list):
-    """可转债扫描完成但无达标机会"""
-    neg_info = ""
-    if neg_list:
-        rows = []
-        for d in sorted(neg_list, key=lambda x: x.get("premium_rate", 0)):
-            reasons = []
-            if d.get("volume", 0) < 1000:
-                reasons.append(f"成交额{d.get('volume', 0):.0f}万不足")
-            bp = d.get("bond_price", 0)
-            if bp < 90:
-                reasons.append(f"价格{bp:.1f}<90")
-            if bp > 200:
-                reasons.append(f"价格{bp:.1f}>200")
-            reason_str = "、".join(reasons) if reasons else "溢价率未达阈值"
-            rows.append(
-                f"- {d.get('bond_name', '')}({d.get('bond_code', '')}) "
-                f"溢价率 {d.get('premium_rate', 0):.2f}% → 未通过: {reason_str}"
-            )
-        neg_info = "\n\n**负溢价转债(未达标):**\n\n" + "\n".join(rows)
-
-    text = f"""### 【可转债扫描报告】
-
----
-
-> 扫描 **{total}** 只可转债，当前无达标套利机会
-{neg_info}
-
-> 达标条件: 溢价率<-0.5% 且 成交额>1000万 且 价格90~200元
-
----"""
-
-    send_dingtalk("可转债扫描报告", text)
-
-
-def notify_cb_ipo(results: list):
-    """可转债打新提醒"""
-    if not results:
-        return
-
-    rows = []
-    for r in results:
-        when = "**今日可申购**" if r.days_from_today == 0 else (
-            f"**{r.days_from_today}天后申购**" if r.days_from_today > 0 else "已截止"
-        )
-        rows.append(
-            f"- {r.bond_name}({r.bond_code}) → 申购代码 **{r.apply_code}** | "
-            f"{when} ({r.apply_date}) | "
-            f"正股 {r.stock_name}({r.stock_code}) {r.stock_price:.2f} | "
-            f"转股价值 {r.convert_value:.2f} | "
-            f"规模 {r.issue_size:.1f}亿 | 评级 {r.rating} | "
-            f"上市 {r.listing_date}"
-        )
-    rows_text = "\n".join(rows)
-
-    text = f"""### 【可转债打新提醒】
-
----
-
-> 发现 **{len(results)}** 只可申购的可转债
-
-{rows_text}
-
-> **原股东**: 股权登记日持仓 → 按比例优先配售（实际可配=配售比例×持股）
-> **网上申购**: 顶格申购1000张，中签率通常 0.001%~0.01%，但上市首日历史平均+10~20%
-> 两者互不冲突，中签后T+20~30日左右上市
-
----"""
-
-    send_dingtalk("可转债打新提醒", text)
-
-
-def notify_cb_putback(results: list):
-    """可转债回售观察名单（预警，需人工验证）"""
-    if not results:
-        return
-
-    rows = []
-    for r in results:
-        rows.append(
-            f"- **{r.bond_name}**({r.bond_code}) | "
-            f"预估收益 **{r.profit_pct:.2f}%** | "
-            f"转债价 {r.bond_price:.2f} ≤ 估算回售价 {r.putback_price:.2f} | "
-            f"正股/转股价 {r.stock_vs_trig:.0f}% (70%=触发) | "
-            f"剩余 {r.years_to_expire:.1f}年 | "
-            f"成交额 {r.volume:.0f}万"
-        )
-    rows_text = "\n".join(rows)
-
-    text = f"""### 【可转债回售观察名单】
-
----
-
-> **{len(results)}** 只可转债进入回售观察区（仅预警，非可执行信号）
-
-{rows_text}
-
-> 筛选条件: 剩余年限<=2年 + 正股<转股价×70% + 转债价<=100元
-> **需人工验证**:
-> ① 正股是否已连续30个交易日低于触发价
-> ② 是否处于公司设定的回售申报窗口期
-> ③ 该债具体回售条款细节（各债可能有差异）
-> 不符合以上任一条件 → 无法真正回售，请勿直接买入
-
----"""
-
-    send_dingtalk("可转债回售观察名单", text)
-
-
-def notify_cb_low_price_maturity(results: list):
-    """低价临期可转债候选。"""
-    if not results:
-        return
-    rows = "\n".join(
-        f"- **{r.bond_name}**({r.bond_code}) | 转债价 **{r.bond_price:.2f}** | "
-        f"剩余 **{r.days_to_expire}天** ({r.expire_date}) | "
-        f"正股 {r.stock_name}({r.stock_code})"
-        for r in results
     )
-    text = f"""### 【低价临期可转债候选】
-
----
-
-{rows}
-
-> 筛选规则：转债价格 < 100，剩余期限 <= 1.5 年。
-
----"""
-    send_dingtalk("低价临期可转债候选", text)
 
 
-def notify_cb_maturity_play(results: list):
-    """正股中线候选信号（每周二全量推送，不去重）"""
-    if not results:
-        return
+def render_weekly_report(
+    report: WeeklyScanReport, settings: AppSettings
+) -> tuple[str, str]:
+    title = f"每周双策略筛选 | {report.as_of:%Y-%m-%d}"
+    low = report.low_price
+    midterm = report.midterm
+    lines = [
+        f"### {title}",
+        "",
+        f"> 数据截至 **{report.as_of:%Y-%m-%d}**，耗时 {report.elapsed_seconds:.1f} 秒",
+        "",
+        "#### 策略一：低价临期转债",
+        "",
+        (
+            f"> 条件：转债现价严格低于 {settings.low_price.max_bond_price:g} 元，"
+            f"剩余期限大于 0 且不超过 {settings.low_price.max_years_to_expire:g} 年。"
+        ),
+        "",
+        f"**候选 {len(low.candidates)} 只 / 扫描 {low.total_bonds} 只**",
+        "",
+    ]
+    if low.candidates:
+        for candidate in low.candidates[: settings.low_price.max_results]:
+            bond = candidate.bond
+            lines.append(
+                f"- **{bond.bond_name}**（{bond.bond_code}） | "
+                f"{bond.bond_price:.2f} 元 | 剩余 {candidate.days_to_expire} 天 | "
+                f"{bond.expire_date:%Y-%m-%d} 到期 | 正股 {bond.stock_name}（{bond.stock_code}）"
+            )
+        if len(low.candidates) > settings.low_price.max_results:
+            lines.append(
+                f"- 另有 {len(low.candidates) - settings.low_price.max_results} 只，"
+                "受消息长度限制未展开"
+            )
+    else:
+        lines.append("- 本周无符合条件的转债")
 
-    rows = []
-    for r in results:
-        corr = "N/A" if r.return_correlation is None else f"{r.return_correlation:.2f}"
-        rows.append(
-            f"- **{r.stock_name}**({r.stock_code}) | "
-            f"行业 {r.sector_name} | "
-            f"4周 {r.stock_4w_return:.1f}% vs 板块 {r.sector_4w_return:.1f}% | "
-            f"超额 **{r.excess_4w_return:.1f}%** | "
-            f"相关 {corr} | "
-            f"跑赢 {r.weekly_outperform_count}/{r.observed_weeks}周 | "
-            f"关联转债 {r.bond_name}({r.bond_code})"
+    lines.extend(
+        [
+            "",
+            f"> 未入选：{_format_counts(low.rejected_reasons)}",
+            f"> 数据不可用：{_format_counts(low.unavailable_reasons)}",
+            "",
+            "---",
+            "",
+            "#### 策略二：正股中线相对强势",
+            "",
+            (
+                f"> 条件：最近 {settings.midterm.weeks} 个完整交易周，申万一级行业累计涨幅"
+                f"不超过 {settings.midterm.max_sector_gain_pct:g}%，正股累计至少跑赢行业 "
+                f"{settings.midterm.min_excess_return_pct:g} 个百分点，且每周都不弱于行业。"
+                "相关系数只展示，不参与筛选。"
+            ),
+            "",
+            (
+                f"**候选 {len(midterm.candidates)} 只 / 可计算 {midterm.evaluated_stocks} 只 / "
+                f"正股总数 {midterm.total_stocks} 只 / 覆盖率 {midterm.coverage_ratio:.1%}**"
+            ),
+            "",
+        ]
+    )
+
+    if midterm.candidates:
+        for candidate in midterm.candidates[: settings.midterm.max_results]:
+            metrics = candidate.metrics
+            correlation = (
+                f"{metrics.correlation:.3f}"
+                if metrics.correlation is not None
+                else "不可计算"
+            )
+            lines.extend(
+                [
+                    f"**{candidate.stock_name}（{candidate.stock_code}）** | "
+                    f"申万一级：{candidate.sector.name}",
+                    "",
+                    f"- 四周：正股 {_format_pct(metrics.stock_return_pct)} | "
+                    f"行业 {_format_pct(metrics.sector_return_pct)} | "
+                    f"超额 {_format_pct(metrics.excess_return_pct)} | 日收益相关系数 {correlation}",
+                    f"- 关联转债：{candidate.bond_name}（{candidate.bond_code}）；"
+                    + "；".join(
+                        f"第{index}周 正股{_format_pct(week.stock_return_pct)} / "
+                        f"行业{_format_pct(week.sector_return_pct)} / "
+                        f"超额{_format_pct(week.excess_return_pct)}"
+                        for index, week in enumerate(metrics.weeks, start=1)
+                    ),
+                    "",
+                ]
+            )
+        if len(midterm.candidates) > settings.midterm.max_results:
+            lines.append(
+                f"另有 {len(midterm.candidates) - settings.midterm.max_results} 只，"
+                "受消息长度限制未展开"
+            )
+    else:
+        lines.append("- 本周无符合条件的正股")
+
+    lines.extend(
+        [
+            "",
+            f"> 未入选：{_format_counts(midterm.rejected_reasons)}",
+            f"> 数据不可用：{_format_counts(midterm.unavailable_reasons)}",
+        ]
+    )
+    if midterm.coverage_ratio < settings.midterm.min_coverage_ratio:
+        lines.extend(
+            [
+                "",
+                (
+                    f"> **数据质量告警：覆盖率低于 "
+                    f"{settings.midterm.min_coverage_ratio:.0%}，本次 Action 将标记失败。**"
+                ),
+            ]
         )
-    rows_text = "\n".join(rows)
-
-    text = f"""### 【正股中线候选】
-
----
-
-> 当前 {len(results)} 只正股相对行业板块持续走强
-
-{rows_text}
-
-> **逻辑**: 板块近4周没怎么涨，正股明显更强，且4个已完成交易周每周均跑赢板块
-> **关联值**: 相关系数按正股/行业板块日收益率计算，仅展示，不作为筛选门槛
-
----"""
-
-    send_dingtalk("正股中线候选", text)
+    return title, "\n".join(lines)
 
 
-def notify_cb_redemption_alert(results: list):
-    """可转债强赎预警 - 正股接近或超过转股价130%"""
-    if not results:
-        return
+def _signed_url(webhook: str, secret: str, timestamp_ms: int | None = None) -> str:
+    timestamp = str(timestamp_ms or round(time.time() * 1000))
+    message = f"{timestamp}\n{secret}".encode()
+    signature = base64.b64encode(
+        hmac.new(secret.encode(), message, digestmod=hashlib.sha256).digest()
+    ).decode()
+    separator = "&" if "?" in webhook else "?"
+    return (
+        f"{webhook}{separator}timestamp={timestamp}"
+        f"&sign={urllib.parse.quote_plus(signature)}"
+    )
 
-    rows = []
-    for r in results:
-        status = "**达到观察区**" if r.ratio >= 130 else "接近观察区"
-        rows.append(
-            f"- **{r.bond_name}**({r.bond_code}) | "
-            f"正股/转股价 **{r.ratio:.1f}%** {status} | "
-            f"转债价 {r.bond_price:.2f} | 转股价值 {r.convert_value:.2f}"
+
+class DingTalkNotifier:
+    def __init__(
+        self,
+        client: DirectHttpClient,
+        settings: DingTalkSettings,
+    ):
+        self.client = client
+        self.settings = settings
+
+    def send(self, title: str, markdown: str) -> None:
+        if not self.settings.enabled:
+            logger.info("DingTalk notification is disabled")
+            return
+        webhook = get_required_env(self.settings.webhook_env)
+        secret = get_required_env(self.settings.secret_env)
+        result = self.client.post_json(
+            _signed_url(webhook, secret),
+            {
+                "msgtype": "markdown",
+                "markdown": {"title": title, "text": markdown},
+            },
         )
-    rows_text = "\n".join(rows)
-
-    text = f"""### 【可转债强赎预警】
-
----
-
-> **{len(results)}** 只可转债正股接近/达到有条件赎回观察区间
-
-{rows_text}
-
-> 主流条款: 转股期内，正股在任意连续30个交易日中至少15日收盘价 >= 转股价×130%，公司获得提前赎回权
-> 触发条款 ≠ 立即强赎，需关注公司董事会是否决定行使赎回权
-> 若最终实施强赎，未及时卖出或转股的转债将按面值+应计利息赎回，高价转债存在回撤风险
-
----"""
-
-    send_dingtalk("可转债强赎预警", text)
-
-
-def notify_new_merger_validated(ann: dict, merger: dict, arb: dict | None):
-    """新吸收合并公告 - AI 校验通过"""
-    cash_info = ""
-    if merger.get("cash_option"):
-        cash_info = f"\n- 现金选择权: 有，价格 {merger.get('cash_price', 'N/A')} 元"
-
-    arb_section = ""
-    if arb:
-        arb_section = f"""
-**实时套利测算**
-
-- 被合并方({arb['target_code']}): {arb['target_price']:.2f} 元
-- 存续方({arb['acquirer_code']}): {arb['acquirer_price']:.2f} 元
-- 换股比例: {arb['exchange_ratio']} (1股被合并方换{arb['exchange_ratio']}股存续方)
-- 理论价值: {arb['theoretical_value']:.2f} 元
-- 价差: {'+' if arb['spread']>=0 else ''}{arb['spread']:.2f} 元 ({arb['spread_pct']:.2f}%)
-- 年化: {arb['annualized_pct']:.2f}% (剩余{arb['days_left']}天)
-"""
-
-    text = f"""### 【新吸收合并公告发现】
-
----
-
-**公告信息**
-
-- 合并方: {merger.get('acquirer_code', '')} {merger.get('acquirer_name', '')}
-- 被合并方: {merger.get('target_code', '')} {merger.get('target_name', '')}
-- 公告: {ann.get('announcementTitle', '')}
-- 发布日期: {ann.get('pub_date', '')}
-- 公告原文: [点击查看PDF]({ann.get('pdf_url', '')})
-
-**AI 提取分析**
-
-- 换股比例: {merger.get('exchange_ratio', 'N/A')}
-- 股权登记日: {merger.get('record_date', 'N/A')}
-- 预计实施日: {merger.get('expected_date', 'N/A')}{cash_info}
-- 背景: {merger.get('notes', 'N/A')}
-{arb_section}
-> AI 置信度: **高** - 已自动加入监控
-
----"""
-
-    send_dingtalk("新吸收合并公告发现", text)
-
-
-def notify_new_merger_unvalidated(ann: dict, merger: dict | None, errors: list[str]):
-    """新吸收合并公告 - 需人工确认"""
-    merger_info = ""
-    if merger:
-        merger_info = f"""
-**AI 提取结果**
-
-- 合并方: {merger.get('acquirer_code', '[未能提取]')} {merger.get('acquirer_name', '')}
-- 被合并方: {merger.get('target_code', '[未能提取]')} {merger.get('target_name', '')}
-- 换股比例: {merger.get('exchange_ratio', '[未能提取]')}
-- 预计实施日: {merger.get('expected_date', '[未能提取]')}
-"""
-
-    error_str = "、".join(errors) if errors else "AI 解析失败"
-
-    text = f"""### 【新吸收合并公告 - 需人工确认】
-
----
-
-- 公告: {ann.get('announcementTitle', '')}
-- 公告原文: [点击查看PDF]({ann.get('pdf_url', '')})
-{merger_info}
-> 缺失/异常字段: {error_str}
-> 请查看 PDF 原文确认
-
----"""
-
-    send_dingtalk("新吸收合并公告 - 需人工确认", text)
-
-
-def notify_merger_spread_signal(result):
-    """吸收合并换股套利日常信号"""
-    text = f"""### 【吸收合并换股套利】
-
----
-
-- 被合并方: {result.target_code} {result.target_name} 现价 {result.target_price:.2f}
-- 存续方: {result.acquirer_code} {result.acquirer_name} 现价 {result.acquirer_price:.2f}
-- 换股比例: {result.exchange_ratio}
-- 理论价值: {result.theoretical_value:.2f}
-- 价差: +{result.spread:.2f} 元 (**{result.spread_pct:.2f}%**)
-- 年化: **{result.annualized_pct:.2f}%**
-- 剩余: {result.days_left} 天 ({result.expected_date} 实施)
-
-> 操作: 买入被合并方股票 → 等待换股实施 → 按比例自动转为存续方股票
-
----"""
-
-    send_dingtalk("吸收合并换股套利", text)
-
-
-def notify_announcement_found(keyword: str, title: str, stock_name: str,
-                               stock_code: str, pub_date: str, pdf_url: str):
-    """通用公告发现通知（下修、吸收合并等）"""
-    tag_map = {
-        "转股价格向下修正": "转股价下修",
-        "下修": "转股价下修",
-        "吸收合并": "吸收合并",
-        "换股合并": "换股合并",
-    }
-    tag = "公告"
-    for k, v in tag_map.items():
-        if k in keyword:
-            tag = v
-            break
-
-    text = f"""### 【{tag}公告发现】
-
----
-
-- 股票: {stock_code} {stock_name}
-- 公告: {title}
-- 发布日期: {pub_date}
-- 公告原文: [点击查看PDF]({pdf_url})
-
-> 关键词: {keyword}
-
----"""
-
-    send_dingtalk(f"{tag}公告发现", text)
-
-
-def notify_ah_premium(results: list):
-    """AH股溢价率极端偏离通知"""
-    if not results:
-        return
-
-    discount = [r for r in results if r.premium_rate < 0]
-    premium = [r for r in results if r.premium_rate >= 100]
-
-    sections = []
-    if discount:
-        rows = "\n".join(
-            f"- **{r.stock_name}**({r.stock_code}) | "
-            f"溢价率 **{r.premium_rate:.1f}%** | A股 {r.a_price:.2f} | H股 {r.h_price:.2f}港元"
-            for r in discount
-        )
-        sections.append(f"**A股折价(罕见):**\n\n{rows}")
-
-    if premium:
-        rows = "\n".join(
-            f"- **{r.stock_name}**({r.stock_code}) | "
-            f"溢价率 **{r.premium_rate:.1f}%** | A股 {r.a_price:.2f} | H股 {r.h_price:.2f}港元"
-            for r in premium
-        )
-        sections.append(f"**A股高溢价(>200%):**\n\n{rows}")
-
-    text = f"""### 【AH股溢价异常】
-
----
-
-> 发现 **{len(results)}** 只AH股溢价率极端偏离
-
-{chr(10).join(sections)}
-
-> A股折价 → 买A卖H机会 | A股高溢价 → 回归风险
-
----"""
-
-    send_dingtalk("AH股溢价异常", text)
+        if result.get("errcode") != 0:
+            raise NotificationError(f"DingTalk rejected message: {result}")
+        logger.info("DingTalk report sent: %s", title)

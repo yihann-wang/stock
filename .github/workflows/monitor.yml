@@ -2,28 +2,38 @@ name: Weekly Convertible Bond and Stock Scan
 
 on:
   schedule:
-    # 每周二 9:40 北京时间 = UTC 01:40
-    - cron: '40 1 * * 2'
+    # Every Tuesday at 09:40 China/Singapore time (UTC+8).
+    - cron: "40 1 * * 2"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: weekly-stock-scan
+  cancel-in-progress: false
+
 jobs:
-  monitor:
+  scan:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'
+          python-version: "3.11"
+          cache: pip
 
-      - run: pip install -r requirements.txt
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
 
-      - name: Test midterm strategy
+      - name: Run tests
         run: python -m unittest discover -s tests -v
 
-      - run: python -m src.monitor_main
+      - name: Scan and notify DingTalk
+        run: python -m src.monitor_main
         env:
-          FORCE_RUN: ${{ github.event_name != 'schedule' }}
+          PYTHONUNBUFFERED: "1"
           DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
           DINGTALK_SECRET: ${{ secrets.DINGTALK_SECRET }}

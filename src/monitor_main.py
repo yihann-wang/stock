@@ -1,14 +1,21 @@
-"""可转债中线候选监控入口。"""
+"""Command-line entry point for the weekly two-strategy scan."""
 
+import argparse
 import logging
-import os
-import traceback
+from datetime import date, datetime
+from pathlib import Path
 
-from .cb_data import get_cb_list
-from .cb_strategy import scan_cb_low_price_maturity, scan_cb_maturity_play
-from .config import load_config
-from .notifier import notify_cb_low_price_maturity, notify_cb_maturity_play, notify_error
-from .price import is_trading_day
+from .bond_provider import EastmoneyBondProvider
+from .http_client import DirectHttpClient
+from .market_provider import (
+    SectorMapRepository,
+    ShenwanSectorProvider,
+    TencentStockHistoryProvider,
+)
+from .notifier import DingTalkNotifier, render_weekly_report
+from .scanner import run_weekly_scan
+from .settings import ROOT_DIR, load_settings
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -17,61 +24,69 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def _safe_run(stage_name: str, func):
-    """运行单个策略，捕获异常并发推钉钉"""
+class CoverageError(RuntimeError):
+    pass
+
+
+def _parse_date(value: str) -> date:
     try:
-        func()
-    except Exception as e:
-        logger.error(f"[{stage_name}] 异常: {e}")
-        logger.error(traceback.format_exc())
-        notify_error(stage=stage_name, error=str(e), detail=traceback.format_exc())
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("date must use YYYY-MM-DD") from exc
 
 
-def run():
-    logger.info("=== 可转债中线候选扫描开始 ===")
-    force_run = os.getenv("FORCE_RUN", "").lower() == "true"
+def _arguments() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Run the weekly stock screen")
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=ROOT_DIR / "config.yml",
+        help="settings YAML path",
+    )
+    parser.add_argument("--as-of", type=_parse_date, default=date.today())
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="print the report without sending DingTalk",
+    )
+    return parser.parse_args()
 
-    if not force_run:
-        try:
-            if not is_trading_day():
-                logger.info("今日非交易日，跳过扫描")
-                return
-        except Exception as e:
-            logger.error(f"交易日判断失败: {e}")
-            notify_error(stage="交易日判断", error=str(e), detail=traceback.format_exc())
-            return
+
+def main() -> int:
+    args = _arguments()
+    settings = load_settings(args.config)
+    data_client = DirectHttpClient(retries=3, backoff_seconds=1.0)
+    market_client = DirectHttpClient(retries=3, backoff_seconds=1.0)
+    sector_repository = SectorMapRepository(settings.market.sector_map_path)
+
+    report = run_weekly_scan(
+        settings=settings,
+        bond_provider=EastmoneyBondProvider(data_client, settings.name_overrides),
+        stock_provider=TencentStockHistoryProvider(market_client),
+        sector_provider=ShenwanSectorProvider(market_client, sector_repository),
+        sector_repository=sector_repository,
+        as_of=args.as_of,
+    )
+    title, markdown = render_weekly_report(report, settings)
+    print(markdown)
+
+    if args.dry_run:
+        logger.info("Dry run complete; DingTalk was not called")
     else:
-        logger.info("手动触发，忽略交易日限制")
+        DingTalkNotifier(DirectHttpClient(retries=1), settings.dingtalk).send(
+            title, markdown
+        )
 
-    def _scan_midterm_candidates():
-        cfg = load_config().get("cb_midterm_stock", {})
-        if not cfg.get("enabled", True):
-            logger.info("正股中线候选扫描已禁用")
-            return
-
-        cb_list = get_cb_list()
-        if not cb_list:
-            logger.warning("可转债数据获取失败")
-            return
-
-        low_price_results = scan_cb_low_price_maturity(cb_list)
-        if low_price_results:
-            logger.info(f"发现 {len(low_price_results)} 只低价临期转债")
-            notify_cb_low_price_maturity(low_price_results)
-        else:
-            logger.info("无低价临期转债候选")
-
-        results = scan_cb_maturity_play(cb_list)
-        if not results:
-            logger.info("无中线候选")
-            return
-
-        logger.info(f"发现 {len(results)} 只中线候选，全部推送")
-        notify_cb_maturity_play(results)
-    _safe_run("可转债中线候选", _scan_midterm_candidates)
-
-    logger.info("=== 可转债中线候选扫描结束 ===")
+    if (
+        settings.midterm.enabled
+        and report.midterm.coverage_ratio < settings.midterm.min_coverage_ratio
+    ):
+        raise CoverageError(
+            f"midterm coverage {report.midterm.coverage_ratio:.1%} is below "
+            f"{settings.midterm.min_coverage_ratio:.1%}"
+        )
+    return 0
 
 
 if __name__ == "__main__":
-    run()
+    raise SystemExit(main())
