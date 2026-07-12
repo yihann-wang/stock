@@ -31,16 +31,23 @@ cb_arbitrage:
   max_bond_price: 9999
   max_results: 10
 
-# 可转债到期博弈套利（每周二推送，永久去重）
-# 到期1年内+转债价低+高溢价 → 公司有动力下修/拉股价 → 买入博弈
-cb_maturity_play:
+# 低价临期可转债候选
+cb_low_price_maturity:
   enabled: true
-  weekly_day: 1                  # 0=周一 1=周二 ... 6=周日
-  max_years_to_expire: 1.0       # 剩余年限上限(到期窗口)
-  max_bond_price: 130            # 转债价上限(安全垫，避免高位接盘)
-  min_premium_rate: 100          # 溢价率下限(高溢价才有博弈空间)
-  min_volume: 200                # 最小成交额(万元)
+  max_years_to_expire: 1.5       # 剩余年限上限(到期窗口)
+  max_bond_price: 100            # 转债价上限(低于面值，安全垫更高)
   max_results: 20
+
+# 正股中线候选（独立于转债价格和到期时间）
+cb_midterm_stock:
+  enabled: true
+  max_results: 20
+  relative_strength:
+    weeks: 4                     # 观察最近4个已完成交易周
+    max_sector_gain_pct: 5       # 板块4周累计涨幅不超过5%，视为没怎么涨
+    min_excess_return_pct: 8     # 正股4周累计至少跑赢板块8个百分点
+    require_every_week_outperform: true
+    min_weekly_excess_pct: 0     # 每周至少跑赢板块0个百分点
 
 # 可转债手动黑名单（兜底用，正常情况留空）
 # 已公告强赎的转债会自动从集思录获取并过滤，不需要在这里维护

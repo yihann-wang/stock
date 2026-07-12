@@ -367,39 +367,61 @@ def notify_cb_putback(results: list):
     send_dingtalk("可转债回售观察名单", text)
 
 
+def notify_cb_low_price_maturity(results: list):
+    """低价临期可转债候选。"""
+    if not results:
+        return
+    rows = "\n".join(
+        f"- **{r.bond_name}**({r.bond_code}) | 转债价 **{r.bond_price:.2f}** | "
+        f"剩余 **{r.days_to_expire}天** ({r.expire_date}) | "
+        f"正股 {r.stock_name}({r.stock_code})"
+        for r in results
+    )
+    text = f"""### 【低价临期可转债候选】
+
+---
+
+{rows}
+
+> 筛选规则：转债价格 < 100，剩余期限 <= 1.5 年。
+
+---"""
+    send_dingtalk("低价临期可转债候选", text)
+
+
 def notify_cb_maturity_play(results: list):
-    """可转债到期博弈套利信号（每周二全量推送，不去重）"""
+    """正股中线候选信号（每周二全量推送，不去重）"""
     if not results:
         return
 
     rows = []
     for r in results:
+        corr = "N/A" if r.return_correlation is None else f"{r.return_correlation:.2f}"
         rows.append(
-            f"- **{r.bond_name}**({r.bond_code}) | "
-            f"剩余 **{r.days_to_expire}天** ({r.expire_date}) | "
-            f"转债价 **{r.bond_price:.2f}** | "
-            f"溢价 {r.premium_rate:.0f}% | "
-            f"正股 {r.stock_name}({r.stock_code}) {r.stock_price:.2f} | "
-            f"转股价 {r.convert_price:.2f} | "
-            f"成交 {r.volume:.0f}万"
+            f"- **{r.stock_name}**({r.stock_code}) | "
+            f"行业 {r.sector_name} | "
+            f"4周 {r.stock_4w_return:.1f}% vs 板块 {r.sector_4w_return:.1f}% | "
+            f"超额 **{r.excess_4w_return:.1f}%** | "
+            f"相关 {corr} | "
+            f"跑赢 {r.weekly_outperform_count}/{r.observed_weeks}周 | "
+            f"关联转债 {r.bond_name}({r.bond_code})"
         )
     rows_text = "\n".join(rows)
 
-    text = f"""### 【可转债到期博弈套利】
+    text = f"""### 【正股中线候选】
 
 ---
 
-> 当前 {len(results)} 只到期1年内的低价高溢价转债
+> 当前 {len(results)} 只正股相对行业板块持续走强
 
 {rows_text}
 
-> **逻辑**: 接近到期 + 转债价低 + 高溢价 = 公司面临偿付压力
-> **预期**: 公司可能主动① 下修转股价(转债大涨) ② 拉抬正股(转股价值上升)
-> **底线**: 转债价低，最差按面值+利息到期偿付，下跌空间有限
+> **逻辑**: 板块近4周没怎么涨，正股明显更强，且4个已完成交易周每周均跑赢板块
+> **关联值**: 相关系数按正股/行业板块日收益率计算，仅展示，不作为筛选门槛
 
 ---"""
 
-    send_dingtalk("可转债到期博弈套利", text)
+    send_dingtalk("正股中线候选", text)
 
 
 def notify_cb_redemption_alert(results: list):

@@ -1,35 +1,14 @@
-"""价差监控入口 - 只推送能赚钱的套利机会"""
+"""可转债中线候选监控入口。"""
 
 import logging
+import os
 import traceback
 
-from datetime import datetime, timedelta, timezone
-
-from .cb_ipo import scan_cb_ipo
-from .cb_strategy import scan_cb_arbitrage, scan_cb_maturity_play, scan_cb_putback
-from .config import (
-    get_active_mergers,
-    get_active_offers,
-    load_config,
-)
-from .merger_strategy import evaluate_merger_signals
-from .notifier import (
-    notify_cb_arbitrage,
-    notify_cb_ipo,
-    notify_cb_maturity_play,
-    notify_cb_putback,
-    notify_error,
-    notify_merger_spread_signal,
-    notify_spread_signal,
-)
+from .cb_data import get_cb_list
+from .cb_strategy import scan_cb_low_price_maturity, scan_cb_maturity_play
+from .config import load_config
+from .notifier import notify_cb_low_price_maturity, notify_cb_maturity_play, notify_error
 from .price import is_trading_day
-from .strategy import evaluate_signals
-
-
-def _beijing_weekday() -> int:
-    """北京时间星期几 (0=周一, 6=周日)"""
-    bj = datetime.now(timezone.utc) + timedelta(hours=8)
-    return bj.weekday()
 
 logging.basicConfig(
     level=logging.INFO,
@@ -49,124 +28,49 @@ def _safe_run(stage_name: str, func):
 
 
 def run():
-    logger.info("=== 价差监控流程开始 ===")
+    logger.info("=== 可转债中线候选扫描开始 ===")
+    force_run = os.getenv("FORCE_RUN", "").lower() == "true"
 
-    # 非交易日（节假日）直接退出，避免推送过期数据
-    try:
-        if not is_trading_day():
-            logger.info("今日非交易日，跳过所有策略")
+    if not force_run:
+        try:
+            if not is_trading_day():
+                logger.info("今日非交易日，跳过扫描")
+                return
+        except Exception as e:
+            logger.error(f"交易日判断失败: {e}")
+            notify_error(stage="交易日判断", error=str(e), detail=traceback.format_exc())
             return
-    except Exception as e:
-        logger.error(f"交易日判断失败: {e}")
-        notify_error(stage="交易日判断", error=str(e), detail=traceback.format_exc())
-        return
+    else:
+        logger.info("手动触发，忽略交易日限制")
 
-    # ===== 要约收购套利监控 =====
-    def _tender_offer():
-        logger.info("--- 要约收购套利 ---")
-        active_offers = get_active_offers()
-        if not active_offers:
-            logger.info("无活跃要约")
-            return
-        logger.info(f"当前活跃要约: {len(active_offers)} 个")
-        signals = evaluate_signals(active_offers)
-        spread_signals = [s for s in signals if s.signal_type == "spread"]
-        if spread_signals:
-            logger.info(f"产生 {len(spread_signals)} 个套利信号")
-            for signal in spread_signals:
-                logger.info(f"信号: {signal.message}")
-                notify_spread_signal(signal.result)
-        else:
-            logger.info("无要约收购套利机会")
-    _safe_run("要约收购套利", _tender_offer)
-
-    # ===== 吸收合并套利监控 =====
-    def _merger():
-        logger.info("--- 吸收合并套利 ---")
-        active_mergers = get_active_mergers()
-        if not active_mergers:
-            logger.info("无活跃吸收合并")
-            return
-        logger.info(f"当前活跃吸收合并: {len(active_mergers)} 个")
-        merger_signals = evaluate_merger_signals(active_mergers)
-        if merger_signals:
-            logger.info(f"产生 {len(merger_signals)} 个吸收合并套利信号")
-            for signal in merger_signals:
-                logger.info(f"信号: {signal.message}")
-                notify_merger_spread_signal(signal.result)
-        else:
-            logger.info("无吸收合并套利机会")
-    _safe_run("吸收合并套利", _merger)
-
-    # ===== 可转债套利（共用一份快照）=====
-    cb_list_holder = {"data": None}
-
-    def _cb_arbitrage():
-        logger.info("--- 可转债套利 ---")
-        from .cb_data import get_cb_list
-        cb_list = get_cb_list()
-        cb_list_holder["data"] = cb_list
-        if not cb_list:
-            logger.warning("可转债数据获取失败，跳过")
-            return
-
-        cb_results = scan_cb_arbitrage(cb_list)
-        if cb_results:
-            logger.info(f"发现 {len(cb_results)} 只转股套利机会")
-            notify_cb_arbitrage(cb_results)
-        else:
-            logger.info("无转股套利机会")
-
-        putback_results = scan_cb_putback(cb_list)
-        if putback_results:
-            logger.info(f"发现 {len(putback_results)} 只回售套利机会")
-            notify_cb_putback(putback_results)
-        else:
-            logger.info("无回售套利机会")
-    _safe_run("可转债套利", _cb_arbitrage)
-
-    # ===== 可转债到期博弈套利（每周二，每次推送全部符合的）=====
-    def _cb_maturity_play():
-        cfg = load_config().get("cb_maturity_play", {})
+    def _scan_midterm_candidates():
+        cfg = load_config().get("cb_midterm_stock", {})
         if not cfg.get("enabled", True):
-            return
-        weekly_day = cfg.get("weekly_day", 1)
-        wd = _beijing_weekday()
-        if wd != weekly_day:
-            names = ["周一","周二","周三","周四","周五","周六","周日"]
-            logger.info(f"--- 到期博弈套利 (今日{names[wd]}, 仅{names[weekly_day]}推送，跳过) ---")
+            logger.info("正股中线候选扫描已禁用")
             return
 
-        logger.info("--- 可转债到期博弈套利 ---")
-        cb_list = cb_list_holder["data"]
+        cb_list = get_cb_list()
         if not cb_list:
-            logger.warning("可转债数据获取失败，跳过到期博弈扫描")
+            logger.warning("可转债数据获取失败")
             return
+
+        low_price_results = scan_cb_low_price_maturity(cb_list)
+        if low_price_results:
+            logger.info(f"发现 {len(low_price_results)} 只低价临期转债")
+            notify_cb_low_price_maturity(low_price_results)
+        else:
+            logger.info("无低价临期转债候选")
 
         results = scan_cb_maturity_play(cb_list)
         if not results:
-            logger.info("无到期博弈机会")
+            logger.info("无中线候选")
             return
 
-        logger.info(f"发现 {len(results)} 只到期博弈机会，全部推送（不去重）")
+        logger.info(f"发现 {len(results)} 只中线候选，全部推送")
         notify_cb_maturity_play(results)
-    _safe_run("可转债到期博弈套利", _cb_maturity_play)
+    _safe_run("可转债中线候选", _scan_midterm_candidates)
 
-    # ===== 可转债打新 =====
-    def _cb_ipo():
-        logger.info("--- 可转债打新 ---")
-        ipo_results = scan_cb_ipo()
-        if ipo_results:
-            logger.info(f"发现 {len(ipo_results)} 只可打新可转债")
-            notify_cb_ipo(ipo_results)
-        else:
-            logger.info("无可打新可转债")
-    _safe_run("可转债打新", _cb_ipo)
-
-    # AH 股溢价已拆到独立 workflow (ah_monitor.yml), 周二 9:35 北京时间运行
-    # 避开早盘前 push2.eastmoney 的 502/504 高发窗口
-
-    logger.info("=== 价差监控流程结束 ===")
+    logger.info("=== 可转债中线候选扫描结束 ===")
 
 
 if __name__ == "__main__":
