@@ -65,6 +65,7 @@ SECTOR_BY_CODE = {sector.code: sector for sector in SW_LEVEL_ONE_SECTORS}
 # to infer their level-one parent during the initial cache build.
 INDUSTRY_PARENT_OVERRIDES = {
     "IT服务Ⅱ": SECTOR_BY_CODE["801750"],
+    "半导体": SECTOR_BY_CODE["801080"],
     "专业服务": SECTOR_BY_CODE["801210"],
     "专用设备": SECTOR_BY_CODE["801890"],
     "休闲食品": SECTOR_BY_CODE["801120"],
@@ -95,6 +96,7 @@ INDUSTRY_PARENT_OVERRIDES = {
     "通用设备": SECTOR_BY_CODE["801890"],
     "造纸": SECTOR_BY_CODE["801140"],
     "银行Ⅱ": SECTOR_BY_CODE["801780"],
+    "电网设备": SECTOR_BY_CODE["801730"],
     "非白酒": SECTOR_BY_CODE["801120"],
     "食品加工": SECTOR_BY_CODE["801120"],
     "饮料乳品": SECTOR_BY_CODE["801120"],
@@ -227,7 +229,7 @@ class SectorMapRepository:
     def save(self) -> None:
         with self._lock:
             payload = {
-                "source": "申万行业分类2021（乐咕成分基线 + 东方财富行业增量）",
+                "source": "申万行业分类2021（乐咕成分基线 + 东方财富行业增量补全）",
                 "updated_at": date.today().isoformat(),
                 "stocks": {
                     code: {"code": sector.code, "name": sector.name}
@@ -399,22 +401,13 @@ class ShenwanSectorProvider:
         if not remaining:
             return set()
 
-        industries = self._stock_industries(stock_codes)
-        inferred_parents: dict[str, set[SectorInfo]] = {}
-        for stock_code, industry_name in industries.items():
-            sector = self.repository.get(stock_code)
-            if sector is not None:
-                inferred_parents.setdefault(industry_name, set()).add(sector)
-
+        industries = self._stock_industries(remaining)
         updates = {}
         for stock_code in remaining:
             industry_name = industries.get(stock_code)
             if not industry_name:
                 continue
-            candidates = inferred_parents.get(industry_name, set())
-            sector = next(iter(candidates)) if len(candidates) == 1 else None
-            if sector is None:
-                sector = INDUSTRY_PARENT_OVERRIDES.get(industry_name)
+            sector = INDUSTRY_PARENT_OVERRIDES.get(industry_name)
             if sector is not None:
                 updates[stock_code] = sector
 

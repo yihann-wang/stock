@@ -100,7 +100,7 @@ class ProviderTest(unittest.TestCase):
 
         self.assertEqual([point.close for point in points], [1000, 1010])
 
-    def test_unknown_sector_uses_inference_and_explicit_parent_override(self):
+    def test_unknown_sector_uses_explicit_parent_overrides(self):
         client = FakeClient(
             {
                 "data": {
@@ -114,10 +114,9 @@ class ProviderTest(unittest.TestCase):
         )
         with tempfile.TemporaryDirectory() as directory:
             repository = SectorMapRepository(Path(directory) / "sectors.json")
-            repository.update({"600001": SectorInfo("801080", "电子")})
             provider = ShenwanSectorProvider(client, repository)
 
-            unresolved = provider.refresh_unknown({"600001", "300001", "601128"})
+            unresolved = provider.refresh_unknown({"300001", "601128"})
 
             self.assertEqual(unresolved, set())
             self.assertEqual(repository.get("300001"), SectorInfo("801080", "电子"))
