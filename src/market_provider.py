@@ -401,7 +401,10 @@ class ShenwanSectorProvider:
         if not remaining:
             return set()
 
-        industries = self._stock_industries(remaining)
+        # 400-prefixed stocks have moved to the delisted board and no longer
+        # carry a standard SW industry classification.
+        lookup_codes = {code for code in remaining if not code.startswith("400")}
+        industries = self._stock_industries(lookup_codes)
         updates = {}
         for stock_code in remaining:
             industry_name = industries.get(stock_code)

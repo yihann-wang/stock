@@ -122,6 +122,18 @@ class ProviderTest(unittest.TestCase):
             self.assertEqual(repository.get("300001"), SectorInfo("801080", "电子"))
             self.assertEqual(repository.get("601128"), SectorInfo("801780", "银行"))
 
+    def test_delisted_board_stock_skips_industry_lookup(self):
+        client = FakeClient({"data": {"diff": []}})
+        with tempfile.TemporaryDirectory() as directory:
+            repository = SectorMapRepository(Path(directory) / "sectors.json")
+            provider = ShenwanSectorProvider(client, repository)
+
+            with self.assertLogs("src.market_provider", level="WARNING"):
+                unresolved = provider.refresh_unknown({"400198"})
+
+        self.assertEqual(unresolved, {"400198"})
+        self.assertEqual(client.calls, [])
+
 
 if __name__ == "__main__":
     unittest.main()
